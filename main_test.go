@@ -18,7 +18,10 @@ func conectarDB(t *testing.T) *sqlc.Queries {
 	t.Helper()
 
 	// 1. Conexión a PostgreSQL en Docker
-	connStr := "postgres://postgres:postgres@localhost:5432/mi_tp2_db?sslmode=disable"
+	connStr, err := cadenaConexion()
+	if err != nil {
+		t.Fatal(err)
+	}
 	dbConn, err := sql.Open("pgx", connStr)
 	if err != nil {
 		t.Fatalf("Error al abrir conexión con la base de datos: %v", err)

@@ -62,6 +62,8 @@ algunas suscripciones y verlas en *Mis suscripciones*.
    - `sqlc generate`: genera el acceso a datos en `db/sqlc/`.
    - `templ generate`: compila los componentes `.templ` a código Go (`*_templ.go`).
    - Compila el ejecutable en `tmp/`.
+   - Si no existe `.env`, lo crea copiando `.env.example` (ver
+     [Variables de entorno](#variables-de-entorno-env)).
    - Borra contenedores y volúmenes previos (`docker compose down -v`).
    - Levanta PostgreSQL (`docker compose up -d --wait`) y espera a que el
      healthcheck (`pg_isready`) indique que la base está lista. El esquema se
@@ -70,6 +72,37 @@ algunas suscripciones y verlas en *Mis suscripciones*.
 2. **Ejecución** del servidor en el puerto 8080.
 3. **Tareas posteriores**: al cortar con `Ctrl+C` (o si la app termina) se
    borran los contenedores y volúmenes.
+
+## Variables de entorno (`.env`)
+
+Las credenciales de la base no están escritas en el código: se leen de un
+archivo `.env` que **no se sube al repositorio** (está en `.gitignore`). En el
+repo está [`.env.example`](.env.example) con valores de ejemplo para
+desarrollo; `make run-app` (y `make`) lo copian como `.env` si todavía no
+existe. Para usar otros valores:
+
+```bash
+cp .env.example .env
+```
+
+y editar `.env`. Lo usan:
+
+- `docker-compose.yml` (`env_file: .env`): usuario, contraseña y nombre de la
+  base del contenedor, y el puerto publicado (`POSTGRES_PORT`).
+- La aplicación y los tests de Go (`cadenaConexion()` en `main.go`): cargan el
+  `.env` con [godotenv](https://github.com/joho/godotenv) y arman la URL de
+  conexión. Si una variable ya está definida en el sistema, tiene prioridad.
+
+## Esperas
+
+- **Base de datos:** `docker compose up --wait` espera el healthcheck
+  (`pg_isready`), que se reintenta durante unos 2 minutos. Además, la
+  aplicación reintenta conectarse cada un segundo durante 60 segundos antes de
+  rendirse, por si la base tarda en aceptar conexiones.
+- **Aplicación (pruebas):** antes de correr Hurl, el makefile consulta la app
+  cada un segundo hasta que responda, con un máximo de `ESPERA_APP` segundos
+  (60 por defecto). Si la app se cae o no responde a tiempo, lo informa y borra
+  los contenedores.
 
 ## Otros comandos
 
@@ -283,7 +316,9 @@ borrar servicios desde la aplicación.
 │   ├── queries/queries.sql
 │   └── sqlc/               # Generado por sqlc (no se versiona)
 ├── hurl/                   # Pruebas de la aplicación
-├── docker-compose.yml      # PostgreSQL con healthcheck
+├── docker-compose.yml      # PostgreSQL con healthcheck (credenciales del .env)
+├── .env.example            # Variables de entorno de ejemplo (el .env no se versiona)
+├── .gitignore
 ├── sqlc.yaml
 └── makefile
 ```
