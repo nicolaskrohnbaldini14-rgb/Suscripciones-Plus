@@ -439,7 +439,38 @@ function prepararPanelServicios() {
     panel.hidden = true;
     boton.setAttribute("aria-expanded", "false");
     salirDelModoElegir();
+    plegarCategorias();
   }
+
+  // desde la barra el panel es lateral: al tocar una categoría se despliegan
+  // sus servicios y empujan a las demás hacia abajo (una abierta por vez)
+  function plegarCategorias(excepto) {
+    panel.querySelectorAll(".panel-categoria.abierta").forEach((c) => {
+      if (c === excepto) return;
+      c.classList.remove("abierta");
+      c.querySelector("h3").setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function alternarCategoria(titulo) {
+    if (alElegir) return; // al elegir, los servicios se ven al pasar el cursor
+    const categoria = titulo.closest(".panel-categoria");
+    plegarCategorias(categoria);
+    const abierta = categoria.classList.toggle("abierta");
+    titulo.setAttribute("aria-expanded", String(abierta));
+  }
+
+  panel.addEventListener("click", (evento) => {
+    const titulo = evento.target.closest(".panel-categoria h3");
+    if (titulo) alternarCategoria(titulo);
+  });
+  panel.addEventListener("keydown", (evento) => {
+    const titulo = evento.target.closest(".panel-categoria h3");
+    if (titulo && (evento.key === "Enter" || evento.key === " ")) {
+      evento.preventDefault();
+      alternarCategoria(titulo);
+    }
+  });
 
   // en modo "elegir", tocar un servicio no navega: se elige y se cierra
   panel.addEventListener("click", (evento) => {
@@ -504,10 +535,13 @@ async function cargarMenuServicios(sesion) {
     for (const [categoria, lista] of agruparPorCategoria(servicios)) {
       const columna = document.createElement("section");
       columna.className = "panel-categoria";
-      // solo se ve la categoría; sus servicios aparecen al pasar el cursor
-      // (o al tocarla: el título puede tomar el foco)
+      // solo se ve la categoría: desde la barra, al tocarla se despliegan sus
+      // servicios (acordeón); al elegir el servicio de una nueva suscripción,
+      // aparecen al pasar el cursor
       const titulo = document.createElement("h3");
       titulo.tabIndex = 0;
+      titulo.setAttribute("role", "button");
+      titulo.setAttribute("aria-expanded", "false");
       titulo.append(iconoCategoria(categoria), categoria);
       const ul = document.createElement("ul");
       for (const s of lista) {
@@ -1005,7 +1039,7 @@ const paginas = {
 // Versión de las páginas HTML. Si el navegador muestra una copia vieja
 // guardada (sin esta versión), se recarga una sola vez para pedir la nueva:
 // al recargar, el navegador consulta al servidor.
-const VERSION_PAGINAS = "2026-11-04b";
+const VERSION_PAGINAS = "2026-11-04c";
 
 function recargarSiEstaDesactualizada() {
   const meta = document.querySelector('meta[name="version-pagina"]');
