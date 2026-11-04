@@ -93,6 +93,31 @@ y editar `.env`. Lo usan:
   `.env` con [godotenv](https://github.com/joho/godotenv) y arman la URL de
   conexión. Si una variable ya está definida en el sistema, tiene prioridad.
 
+## Usuarios de prueba
+
+Para probar la app sin registrarse, el `.env.example` trae tres usuarios que
+la app crea al iniciar (si no existen), cada uno con varias suscripciones de
+ejemplo:
+
+| Nombre | Email | Contraseña |
+|---|---|---|
+| Ana Prueba | `ana@ejemplo.com` | `ana12345` |
+| Bruno Prueba | `bruno@ejemplo.com` | `bruno12345` |
+| Carla Prueba | `carla@ejemplo.com` | `carla12345` |
+
+Las suscripciones se arman a partir del mes actual, así que siempre hay
+vencimientos en el mes que se está viendo. Entre las de los tres usuarios hay
+suscripciones con y sin cuenta del servicio, dos cuentas distintas de Netflix
+(Ana), una del mes anterior que se renueva sola al iniciar (OSDE de Ana), una
+pausada, una cancelada y otras que vencen el mes siguiente.
+
+Se definen en el `.env` como `USUARIO_PRUEBA_1`, `USUARIO_PRUEBA_2`, ... con
+el formato `nombre|email|contraseña`; se pueden agregar más o desactivarlos
+con `CARGAR_USUARIOS_DE_PRUEBA=false`. La carga está en
+[`logic/datos_de_prueba.go`](logic/datos_de_prueba.go) y usa los mismos
+servicios de la app, así que pasa por las mismas validaciones y las
+contraseñas se guardan hasheadas.
+
 ## Esperas
 
 - **Base de datos:** `docker compose up --wait` espera el healthcheck
@@ -298,6 +323,7 @@ borrar servicios desde la aplicación.
 | `publico.hurl` | Portada sin JavaScript, panel con las 8 categorías y sus logos, login y registro, redirección a `/login` sin sesión, `Cache-Control` del CSS. |
 | `cuentas.hurl` | Registro con aviso de bienvenida, *"Hola, {nombre}"*, logout, login correcto e incorrecto y validaciones. |
 | `suscripcion.hurl` | Alta (y validaciones), varias cuentas por servicio, detalle, ver la contraseña, modificar monto/usuario/contraseña, estados, buscador, renovación automática, meses anteriores de solo lectura, eliminar y suscripciones ajenas. |
+| `datos_de_prueba.hurl` | Que los usuarios de prueba del `.env` puedan entrar y vean sus suscripciones de ejemplo del mes (incluida la renovación automática). |
 
 # Estructura del proyecto
 
@@ -308,7 +334,7 @@ borrar servicios desde la aplicación.
 ├── handlers/
 │   ├── web.go              # Rutas, sesión y handlers HTML
 │   └── sesiones.go         # Sesiones con cookie HttpOnly
-├── logic/                  # Reglas de negocio (+ renovacion.go y sus tests)
+├── logic/                  # Reglas de negocio (+ renovacion.go y sus tests, datos_de_prueba.go)
 ├── views/                  # Componentes templ, vencimientos.go y views_test.go
 ├── static/styles.css       # Estilos (sin JavaScript)
 ├── db/

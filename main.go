@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib" // driver de PostgreSQL
@@ -47,6 +48,9 @@ func main() {
 		log.Fatalf("Error al precargar el catálogo de servicios: %v", err)
 	}
 	log.Println("Catálogo de servicios precargado")
+
+	// usuarios de prueba del .env, con suscripciones de ejemplo
+	cargarUsuariosDePrueba(queries)
 
 	// las suscripciones activas que ya vencieron se renuevan por el mismo plazo
 	if renovadas, err := logic.NuevoServicioSuscripcion(queries).RenovarVencidas(ctx); err != nil {
@@ -110,5 +114,39 @@ func esperarBaseDeDatos(db *sql.DB, maximo time.Duration) error {
 		}
 		log.Printf("Esperando a PostgreSQL... (%v)", err)
 		time.Sleep(time.Second)
+	}
+}
+
+// cargarUsuariosDePrueba crea las cuentas USUARIO_PRUEBA_1, USUARIO_PRUEBA_2,
+// ... del .env (formato nombre|email|contraseña), salvo que
+// CARGAR_USUARIOS_DE_PRUEBA sea "false"
+func cargarUsuariosDePrueba(queries *sqlc.Queries) {
+	if strings.EqualFold(os.Getenv("CARGAR_USUARIOS_DE_PRUEBA"), "false") {
+		return
+	}
+
+	var usuarios []logic.UsuarioDePrueba
+	for i := 1; ; i++ {
+		valor := os.Getenv(fmt.Sprintf("USUARIO_PRUEBA_%d", i))
+		if valor == "" {
+			break
+		}
+		partes := strings.Split(valor, "|")
+		if len(partes) != 3 {
+			log.Fatalf("USUARIO_PRUEBA_%d tiene que tener el formato nombre|email|contraseña", i)
+		}
+		usuarios = append(usuarios, logic.UsuarioDePrueba{
+			Nombre:   strings.TrimSpace(partes[0]),
+			Email:    strings.TrimSpace(partes[1]),
+			Password: strings.TrimSpace(partes[2]),
+		})
+	}
+
+	creados, err := logic.CargarUsuariosDePrueba(context.Background(), queries, usuarios)
+	if err != nil {
+		log.Fatalf("Error al cargar los usuarios de prueba: %v", err)
+	}
+	if creados > 0 {
+		log.Printf("Usuarios de prueba cargados: %d (ver .env)", creados)
 	}
 }

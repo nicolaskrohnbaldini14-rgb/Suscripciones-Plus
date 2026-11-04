@@ -1,6 +1,6 @@
 APP_NAME := Tp5-Krohn-Trapani-Cicopiedi
 HOST := http://localhost:8080
-HURL_FILES := hurl/publico.hurl hurl/cuentas.hurl hurl/suscripcion.hurl
+HURL_FILES := hurl/publico.hurl hurl/cuentas.hurl hurl/suscripcion.hurl hurl/datos_de_prueba.hurl
 # segundos máximos que se espera a que la aplicación responda
 ESPERA_APP := 60
 
