@@ -119,11 +119,11 @@ La aplicación está separada en páginas según quién la usa:
 | `nueva-suscripcion.html` | Con sesión | Formulario de alta: servicio del catálogo (agrupado por categoría; con `?servicio={id}` viene preseleccionado), monto y fechas; usuario y contraseña de la cuenta son opcionales (salvo para diferenciar una segunda suscripción al mismo servicio). La suscripción se crea siempre **Activa**. |
 
 Todas las páginas tienen en la barra superior el botón **Servicios ▾**: al
-pasar el cursor (o tocarlo en el celular) se abre un **panel lateral** a la
-izquierda, debajo de la barra, con las categorías del catálogo una debajo de
-la otra (cada una con su ícono, dibujado en SVG en `app.js`). Al tocar una
-categoría se despliegan sus servicios y empujan a las demás hacia abajo
-(acordeón: una abierta por vez). Los mismos íconos aparecen al lado de cada
+pasar el cursor (o tocarlo en el celular) se despliega un panel **justo debajo
+del botón**, con las categorías del catálogo una debajo de la otra (cada una
+con su ícono, dibujado en SVG en `app.js`). Al hacer clic en una categoría se
+despliegan sus servicios y empujan a las demás hacia abajo (acordeón: una
+abierta por vez). Los mismos íconos aparecen al lado de cada
 suscripción en *Mis suscripciones*. Lo completa `app.js` con
 `GET /servicios`. Con la sesión iniciada, cada servicio es un link a
 `nueva-suscripcion.html?servicio={id}`, que abre el formulario con ese
@@ -132,9 +132,9 @@ Escape.
 
 En el formulario de nueva suscripción, el selector de servicio abre el
 catálogo en grande, centrado sobre la pantalla desenfocada (en vez de la
-lista desplegable del navegador), con las categorías en grilla: al pasar el
-cursor por una se despliegan sus servicios encima del resto, con el servicio
-actual resaltado. Al tocar uno, queda elegido en el formulario y el panel se
+lista desplegable del navegador), con las categorías en grilla: al hacer clic
+en una se despliegan sus servicios encima del resto, con el servicio actual
+resaltado. Al tocar uno, queda elegido en el formulario y el panel se
 cierra.
 
 Con la sesión iniciada, la barra muestra las opciones como "pastillas" (la
@@ -191,8 +191,9 @@ Funcionamiento de `app.js`:
   verla hay que confirmar la contraseña del usuario de Suscripciones+
   (`POST /suscripciones/{id}/password`). Se cierra con la ×, con Escape o
   tocando el fondo, y al cerrarse la contraseña vuelve a ocultarse.
-- **Buscador:** filtra las suscripciones del mes que se está viendo por
-  servicio, categoría o usuario de la cuenta, a medida que se escribe.
+- **Buscador:** un campo con una lupa que filtra las suscripciones del mes
+  que se está viendo por servicio, categoría o usuario de la cuenta, a medida
+  que se escribe.
 - **Solo lectura:** en los meses anteriores al actual, y en los períodos que
   ya se renovaron (*Vencida (renovada)*), no aparecen los botones de
   modificar ni de eliminar. La API también lo

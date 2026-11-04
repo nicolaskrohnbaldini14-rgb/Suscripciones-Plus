@@ -420,12 +420,14 @@ function prepararPanelServicios() {
   }
 
   function abrir() {
+    if (panel.classList.contains("modo-elegir")) plegarCategorias();
     salirDelModoElegir();
     mostrar();
   }
 
   function abrirParaElegir(idActual, alElegirServicio) {
     salirDelModoElegir();
+    plegarCategorias();
     alElegir = alElegirServicio;
     panel.classList.add("modo-elegir");
     ayudaOriginal = [...ayuda.childNodes];
@@ -442,8 +444,8 @@ function prepararPanelServicios() {
     plegarCategorias();
   }
 
-  // desde la barra el panel es lateral: al tocar una categoría se despliegan
-  // sus servicios y empujan a las demás hacia abajo (una abierta por vez)
+  // al hacer clic en una categoría se despliegan sus servicios (una abierta
+  // por vez)
   function plegarCategorias(excepto) {
     panel.querySelectorAll(".panel-categoria.abierta").forEach((c) => {
       if (c === excepto) return;
@@ -453,7 +455,6 @@ function prepararPanelServicios() {
   }
 
   function alternarCategoria(titulo) {
-    if (alElegir) return; // al elegir, los servicios se ven al pasar el cursor
     const categoria = titulo.closest(".panel-categoria");
     plegarCategorias(categoria);
     const abierta = categoria.classList.toggle("abierta");
@@ -535,9 +536,9 @@ async function cargarMenuServicios(sesion) {
     for (const [categoria, lista] of agruparPorCategoria(servicios)) {
       const columna = document.createElement("section");
       columna.className = "panel-categoria";
-      // solo se ve la categoría: desde la barra, al tocarla se despliegan sus
-      // servicios (acordeón); al elegir el servicio de una nueva suscripción,
-      // aparecen al pasar el cursor
+      // solo se ve la categoría: al hacer clic se despliegan sus servicios
+      // (desde la barra empujan a las demás hacia abajo; al elegir el servicio
+      // de una nueva suscripción aparecen encima de la grilla)
       const titulo = document.createElement("h3");
       titulo.tabIndex = 0;
       titulo.setAttribute("role", "button");
@@ -1039,7 +1040,7 @@ const paginas = {
 // Versión de las páginas HTML. Si el navegador muestra una copia vieja
 // guardada (sin esta versión), se recarga una sola vez para pedir la nueva:
 // al recargar, el navegador consulta al servidor.
-const VERSION_PAGINAS = "2026-11-04c";
+const VERSION_PAGINAS = "2026-11-04d";
 
 function recargarSiEstaDesactualizada() {
   const meta = document.querySelector('meta[name="version-pagina"]');
