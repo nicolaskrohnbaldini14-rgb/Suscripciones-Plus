@@ -108,8 +108,9 @@ ejemplo:
 Las suscripciones se arman a partir del mes actual, así que siempre hay
 vencimientos en el mes que se está viendo. Entre las de los tres usuarios hay
 suscripciones con y sin cuenta del servicio, dos cuentas distintas de Netflix
-(Martina), una del mes anterior que se renueva sola al iniciar (OSDE de Martina), una
-pausada, una cancelada y otras que vencen el mes siguiente.
+(Martina), una del mes anterior que se renueva sola al iniciar (OSDE de Martina),
+servicios del hogar (Internet, luz) y seguros, algunas pausadas y otras que
+vencen el mes siguiente.
 
 Se definen en el `.env` como `USUARIO_PRUEBA_1`, `USUARIO_PRUEBA_2`, ... con
 el formato `nombre|email|contraseña`; se pueden agregar más o desactivarlos
@@ -176,9 +177,9 @@ Navegador ──(GET de páginas, POST de formularios + cookie de sesión)──
 | Buscador | Formulario `GET ?q=`: el servidor filtra por servicio, categoría o cuenta. |
 | Calendario | Se arma en Go (`ArmarCalendario`); el cartel de cada día marcado se muestra con CSS al pasar el cursor. |
 | Detalle de una suscripción | `?ver={id}`: el servidor dibuja el recuadro sobre la lista desenfocada; la × y el fondo son links que lo cierran. |
-| Modificar (monto, usuario y contraseña) | `?ver={id}&editar=1` muestra el formulario; `POST .../{id}/modificar`. |
+| Modificar (monto, usuario, contraseña y estado) | `?ver={id}&editar=1` muestra el formulario, con un selector *Activa* / *Pausada*; `POST .../{id}/modificar`. En la lista el estado solo se muestra. |
 | Ver la contraseña de la cuenta | `<details>` con un formulario que pide la contraseña del usuario (`POST .../{id}/password`); el servidor la muestra solo si es correcta. |
-| Cambiar el estado / eliminar | Formularios `POST .../{id}/estado` y `POST .../{id}/eliminar`. |
+| Eliminar | Formulario `POST .../{id}/eliminar`. |
 | Avisos | Después de redirigir, `?ok=creada` (etc.) muestra el aviso; los errores se muestran directamente con su código HTTP. |
 
 ## Componentes templ
@@ -211,8 +212,7 @@ crema `#ece6d4`) con una textura de grilla suave en el fondo, layout con
 | `GET` | `/cuenta/suscripciones` | Con sesión | Suscripciones del mes. Parámetros: `mes`, `q` (búsqueda), `ver` (detalle), `editar`, `ok` (aviso). |
 | `GET` | `/cuenta/suscripciones/nueva` | Con sesión | Formulario de alta. Parámetros: `servicio` (preseleccionado), `catalogo=1`. |
 | `POST` | `/cuenta/suscripciones` | Con sesión | Crea la suscripción y redirige al mes en que vence. |
-| `POST` | `/cuenta/suscripciones/{id}/estado` | Con sesión | Cambia el estado (*Activa*, *Pausada*, *Cancelada*). |
-| `POST` | `/cuenta/suscripciones/{id}/modificar` | Con sesión | Modifica monto, usuario y contraseña de la cuenta. |
+| `POST` | `/cuenta/suscripciones/{id}/modificar` | Con sesión | Modifica monto, usuario y contraseña de la cuenta y el estado (*Activa* o *Pausada*). |
 | `POST` | `/cuenta/suscripciones/{id}/password` | Con sesión | Muestra la contraseña de la cuenta si se confirma la del usuario. |
 | `POST` | `/cuenta/suscripciones/{id}/eliminar` | Con sesión | Elimina la suscripción. |
 | `GET` | `/static/styles.css` | Público | Hoja de estilos (`Cache-Control: no-cache`). |
@@ -244,7 +244,7 @@ El modelo de datos está compuesto por 4 tablas relacionales, definidas en
 |---|---|
 | `usuario` | Cuenta de la persona que usa la app (nombre, email y contraseña hasheada con bcrypt). |
 | `servicio` | Catálogo de servicios disponibles (nombre + categoría), normalizado para poder agrupar el gasto por categoría. Se precarga al iniciar la app. |
-| `suscripcion` | Relaciona un `usuario` con un `servicio`: monto, fecha de inicio, fecha de vencimiento, credenciales de acceso al servicio (usuario/contraseña de esa cuenta, **opcionales**: pueden ser `NULL`) y estado (`Activa`, `Pausada`, `Cancelada` o `Vencida`). |
+| `suscripcion` | Relaciona un `usuario` con un `servicio`: monto, fecha de inicio, fecha de vencimiento, credenciales de acceso al servicio (usuario/contraseña de esa cuenta, **opcionales**: pueden ser `NULL`) y estado (`Activa`, `Pausada` o `Vencida`). |
 | `pago` | Historial real de cobros de una suscripción. Permite calcular el gasto efectivo mes a mes, no solo el proyectado. |
 
 **Relaciones:**
@@ -281,11 +281,13 @@ borrar servicios desde la aplicación.
 | Streaming | Netflix, HBO Max, Disney+, Prime Video, Paramount+, Star+, YouTube Premium |
 | Música | Spotify, iTunes, YouTube Music, Deezer, Tidal |
 | Software | Microsoft 365, Google One, iCloud+, Adobe Creative Cloud, ChatGPT Plus, Canva Pro, Dropbox |
+| Hogar | Internet / Wifi, Luz, Gas, Agua, Cable / TV, Telefonía fija, Expensas |
+| Seguros | Seguro de auto, Seguro de moto, Seguro de hogar, Seguro de vida, Seguro de celular, Seguro de viaje |
 | Deportes | Gimnasio, Pádel, Fútbol, Tenis, Natación, Yoga, Crossfit, Club deportivo |
 | Salud | OSDE, Swiss Medical, Galeno, Medifé, Sancor Salud, Omint |
-| Financiero | Seguro de auto, Seguro de hogar, Seguro de vida, Mantenimiento de cuenta bancaria, Cuota de préstamo |
+| Financiero | Mantenimiento de cuenta bancaria, Cuota de préstamo, Tarjeta de crédito |
 | Turismo | Aerolíneas Plus, Despegar, Booking.com, Airbnb |
-| Otros | Internet hogar, Telefonía celular, Mercado Libre Meli+, Rappi Pro, PedidosYa Plus |
+| Otros | Telefonía celular, Mercado Libre Meli+, Rappi Pro, PedidosYa Plus |
 
 # Reglas de negocio
 
@@ -294,10 +296,10 @@ borrar servicios desde la aplicación.
 - **Servicios:** el catálogo viene precargado y es de solo lectura.
 - **Suscripciones:**
   - El servicio tiene que existir; el monto tiene que ser mayor a cero y la fecha de inicio anterior a la de vencimiento.
-  - Se crean siempre en estado `Activa`; después se pueden pasar a `Pausada` o `Cancelada` (y reactivar).
+  - Se crean siempre en estado `Activa`; después se pueden pausar y reactivar desde *Modificar* (`Activa` y `Pausada` son los únicos estados que se pueden elegir). No hay estado `Cancelada`: para dejar una suscripción se la elimina.
   - Usuario y contraseña de la cuenta del servicio son opcionales (un gimnasio o una cancha de pádel no tienen cuenta). La contraseña nunca se muestra salvo que el usuario confirme la suya.
   - Se puede tener **varias suscripciones al mismo servicio** si son cuentas distintas: desde la segunda (mientras la otra siga activa o pausada) hay que indicar el usuario de la cuenta, y no se puede repetir uno en uso (sin distinguir mayúsculas).
-  - **Renovación automática:** cuando una suscripción activa vence, se renueva sola por el mismo plazo con el que se registró (un mes, un año, etc.). El período vencido queda como historial con estado `Vencida` y se crea uno nuevo con el mismo monto y la misma cuenta. Se hace al iniciar la app y cada vez que se listan las suscripciones. Las pausadas y canceladas no se renuevan.
+  - **Renovación automática:** cuando una suscripción activa vence, se renueva sola por el mismo plazo con el que se registró (un mes, un año, etc.). El período vencido queda como historial con estado `Vencida` y se crea uno nuevo con el mismo monto y la misma cuenta. Se hace al iniciar la app y cada vez que se listan las suscripciones. Las pausadas no se renuevan.
   - Las suscripciones `Vencida` y las que vencen en un mes anterior al actual son de **solo lectura**.
   - El *gasto mensual activo* suma las suscripciones activas del mes y los períodos que ya se renovaron.
 - **Pagos:** la suscripción tiene que existir, el monto tiene que ser mayor a cero y la fecha de pago no puede ser posterior al vencimiento de la suscripción.
@@ -320,9 +322,9 @@ borrar servicios desde la aplicación.
 
 | Archivo | Qué prueba |
 |---|---|
-| `publico.hurl` | Portada sin JavaScript, panel con las 8 categorías y sus logos, login y registro, redirección a `/login` sin sesión, `Cache-Control` del CSS. |
+| `publico.hurl` | Portada sin JavaScript, panel con las 10 categorías (incluidas Hogar y Seguros) y sus logos, login y registro, redirección a `/login` sin sesión, `Cache-Control` del CSS. |
 | `cuentas.hurl` | Registro con aviso de bienvenida, *"Hola, {nombre}"*, logout, login correcto e incorrecto y validaciones. |
-| `suscripcion.hurl` | Alta (y validaciones), varias cuentas por servicio, detalle, ver la contraseña, modificar monto/usuario/contraseña, estados, buscador, renovación automática, meses anteriores de solo lectura, eliminar y suscripciones ajenas. |
+| `suscripcion.hurl` | Alta (y validaciones), varias cuentas por servicio, detalle, ver la contraseña, modificar monto/usuario/contraseña, pausar desde *Modificar* (sin estado Cancelada), buscador, renovación automática, meses anteriores de solo lectura, eliminar y suscripciones ajenas. |
 | `datos_de_prueba.hurl` | Que los usuarios de prueba del `.env` puedan entrar y vean sus suscripciones de ejemplo del mes (incluida la renovación automática). |
 
 # Estructura del proyecto

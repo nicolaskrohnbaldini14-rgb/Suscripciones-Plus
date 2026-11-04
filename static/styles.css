@@ -858,15 +858,13 @@ section > h2 {
   margin-left: auto;
 }
 
-/* selector de estado de cada suscripción en la lista */
-.select-estado {
-  padding: 4px 8px;
-  font-size: 0.85rem;
-  flex-shrink: 0;
-}
-
 .item .estado-fijo {
   margin-left: auto;
+}
+
+/* junto al botón Modificar, el estado queda pegado a él */
+.item .btn-modificar + .estado-fijo {
+  margin-left: 0;
 }
 
 .panel {
@@ -1166,16 +1164,10 @@ a.btn-modificar {
   margin-left: auto;
 }
 
-/* cambiar el estado: selector + botón */
-.form-estado,
 .form-eliminar {
   display: flex;
   gap: 6px;
   margin: 0;
-}
-
-.form-estado .boton-chico {
-  padding: 4px 10px;
 }
 
 /* buscador: campo + botón */

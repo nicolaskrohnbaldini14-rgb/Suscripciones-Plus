@@ -116,15 +116,37 @@ func TestMisSuscripcionesPage_Editable(t *testing.T) {
 
 	verificarContiene(t, html,
 		"Gimnasio — $ 32.000,00",
-		`action="/cuenta/suscripciones/5/estado"`,
+		`<span class="estado-fijo">Activa</span>`,
 		`action="/cuenta/suscripciones/5/eliminar"`,
 		"Modificar",
 		`name="q"`,
 		"Gasto mensual activo de octubre de 2026: $ 32.000,00",
 		"Vence el 28:",
 	)
-	// la lista no muestra la cuenta ni las fechas: están en el detalle
-	verificarNoContiene(t, html, "martinagym", "<script")
+	// la lista no muestra la cuenta ni las fechas (están en el detalle) y el
+	// estado se cambia desde "Modificar", no desde la lista
+	verificarNoContiene(t, html, "martinagym", "<script", `name="estado"`, "Cancelada")
+}
+
+func TestDetalle_ModificarConEstado(t *testing.T) {
+	s := filaDePrueba()
+	d := DatosSuscripciones{
+		Mes: "2026-10", NombreMes: "octubre de 2026", EsMesActual: true,
+		Suscripciones: []Fila{s}, HayEnElMes: true, HayAlguna: true,
+		Editables: map[int32]bool{5: true},
+		Detalle: &Detalle{Sub: s, Editable: true, Editando: true,
+			Form: FormModificar{Monto: "32000", UsuarioCuenta: "martinagym", Estado: "Pausada"}},
+	}
+	html := renderizar(t, MisSuscripcionesPage(Pagina{Clave: "suscripciones", Sesion: &Sesion{Nombre: "Nico"}}, d))
+
+	verificarContiene(t, html,
+		`action="/cuenta/suscripciones/5/modificar"`,
+		`<select name="estado">`,
+		`<option value="Activa">Activa</option>`,
+		`<option value="Pausada" selected>Pausada</option>`,
+	)
+	// no existe el estado Cancelada: para dejar una suscripción se la elimina
+	verificarNoContiene(t, html, "Cancelada")
 }
 
 func TestMisSuscripcionesPage_SoloLecturaYDetalle(t *testing.T) {

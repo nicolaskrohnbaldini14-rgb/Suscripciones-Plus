@@ -17,7 +17,7 @@ netflix_id: xpath "string(//select[@name='id_servicio']//option[normalize-space(
 padel_id: xpath "string(//select[@name='id_servicio']//option[normalize-space(.)='Pádel']/@value)"
 spotify_id: xpath "string(//select[@name='id_servicio']//option[normalize-space(.)='Spotify']/@value)"
 [Asserts]
-xpath "count(//select[@name='id_servicio']/optgroup)" == 8
+xpath "count(//select[@name='id_servicio']/optgroup)" == 10
 # se crea siempre activa y el usuario sale de la sesión
 xpath "count(//select[@name='estado'])" == 0
 xpath "count(//select[@name='id_usuario'])" == 0
@@ -186,6 +186,9 @@ HTTP 200
 xpath "string(//form[contains(@action,'/modificar')]//input[@name='monto']/@value)" == "1500.00"
 xpath "string(//form[contains(@action,'/modificar')]//input[@name='usuario_cuenta']/@value)" == "cuenta@test.com"
 xpath "string(//form[contains(@action,'/modificar')]//input[@name='password_cuenta']/@value)" == ""
+# el estado se elige en el mismo formulario: solo Activa o Pausada
+xpath "count(//form[contains(@action,'/modificar')]//select[@name='estado']/option)" == 2
+xpath "string(//form[contains(@action,'/modificar')]//select[@name='estado']/option[@selected]/@value)" == "Activa"
 
 POST {{host}}/cuenta/suscripciones/{{sub_id}}/modificar
 [FormParams]
@@ -229,28 +232,59 @@ xpath "normalize-space(//p[@class='detalle-error'])" contains "con la cuenta"
 xpath "string(//form[contains(@action,'/modificar')]//input[@name='usuario_cuenta']/@value)" == "otra@test.com"
 
 
-# ---------- 8. Cambiar el estado ----------
-POST {{host}}/cuenta/suscripciones/{{sub_id}}/estado
+# ---------- 8. Pausar desde "Modificar" ----------
+# en la lista ya no hay selector de estado: solo se muestra
+GET {{host}}/cuenta/suscripciones?mes=2026-12
+HTTP 200
+[Asserts]
+xpath "count(//ul[@id='lista-suscripciones']//select[@name='estado'])" == 0
+xpath "normalize-space(//li[.//a[contains(@href,'ver={{sub_id}}')]]//span[@class='estado-fijo'])" == "Activa"
+
+POST {{host}}/cuenta/suscripciones/{{sub_id}}/modificar
 [FormParams]
 mes: 2026-12
+monto: 2000
+usuario_cuenta: cambiada@test.com
 estado: Pausada
 HTTP 303
 [Asserts]
-header "Location" == "/cuenta/suscripciones?mes=2026-12&ok=estado"
+header "Location" == "/cuenta/suscripciones?mes=2026-12&ver={{sub_id}}&ok=modificada"
 
 GET {{host}}/cuenta/suscripciones?mes=2026-12
 HTTP 200
 [Asserts]
-xpath "string(//form[@action='/cuenta/suscripciones/{{sub_id}}/estado']//option[@selected]/@value)" == "Pausada"
+xpath "normalize-space(//li[.//a[contains(@href,'ver={{sub_id}}')]]//span[@class='estado-fijo'])" == "Pausada"
 # la pausada no cuenta para el gasto
 xpath "normalize-space(//p[@class='total'])" == "Gasto mensual activo de diciembre de 2026: $ 15.900,00"
 
-# no se puede pasar a Vencida a mano (400)
-POST {{host}}/cuenta/suscripciones/{{sub_id}}/estado
+# al volver a modificar, el formulario muestra el estado actual
+GET {{host}}/cuenta/suscripciones?mes=2026-12&ver={{sub_id}}&editar=1
+HTTP 200
+[Asserts]
+xpath "string(//form[contains(@action,'/modificar')]//select[@name='estado']/option[@selected]/@value)" == "Pausada"
+
+# no se puede pasar a Vencida a mano ni cancelar: para dejarla se elimina (400)
+POST {{host}}/cuenta/suscripciones/{{sub_id}}/modificar
 [FormParams]
 mes: 2026-12
+monto: 2000
 estado: Vencida
 HTTP 400
+
+POST {{host}}/cuenta/suscripciones/{{sub_id}}/modificar
+[FormParams]
+mes: 2026-12
+monto: 2000
+estado: Cancelada
+HTTP 400
+[Asserts]
+xpath "normalize-space(//p[@class='detalle-error'])" contains "no es válido"
+
+# la ruta vieja para cambiar el estado ya no existe
+POST {{host}}/cuenta/suscripciones/{{sub_id}}/estado
+[FormParams]
+estado: Activa
+HTTP 404
 
 
 # ---------- 9. Buscador ----------
@@ -287,8 +321,8 @@ sub_vieja_id: xpath "string(//li[.//strong[starts-with(normalize-space(.),'Spoti
 [Asserts]
 xpath "count(//p[@class='aviso-lectura'])" == 1
 xpath "normalize-space(//li[contains(@class,'item-solo-lectura')]//span[@class='estado-fijo'])" == "Vencida (renovada)"
-# en un mes anterior no hay formularios para modificar
-xpath "count(//form[contains(@action,'/estado')])" == 0
+# en un mes anterior no hay botones para modificar ni eliminar
+xpath "count(//a[@class='btn-modificar'])" == 0
 xpath "count(//form[contains(@action,'/eliminar')])" == 0
 
 # el período siguiente (marzo de 2026) mantiene el día y el monto
@@ -312,16 +346,17 @@ HTTP 403
 [Asserts]
 xpath "normalize-space(//div[contains(@class,'mensaje')])" contains "no se pueden modificar"
 
-POST {{host}}/cuenta/suscripciones/{{sub_vieja_id}}/estado
+POST {{host}}/cuenta/suscripciones/{{sub_vieja_id}}/modificar
 [FormParams]
 mes: 2025-03
-estado: Cancelada
+monto: 1
 HTTP 403
 
 POST {{host}}/cuenta/suscripciones/{{sub_vieja_id}}/modificar
 [FormParams]
 mes: 2025-03
-monto: 1
+monto: 2900
+estado: Pausada
 HTTP 403
 
 # el detalle se puede ver, pero sin "Modificar"

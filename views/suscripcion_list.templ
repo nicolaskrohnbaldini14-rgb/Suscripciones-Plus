@@ -71,8 +71,8 @@ templ contenidoMisSuscripciones(d DatosSuscripciones) {
 	}
 }
 
-// ItemSuscripcion: logo y datos (link al detalle) y, si es editable,
-// "Modificar", el cambio de estado y "Eliminar"
+// ItemSuscripcion: logo y datos (link al detalle), el estado y, si es
+// editable, "Modificar" (monto, cuenta y estado) y "Eliminar"
 templ ItemSuscripcion(d DatosSuscripciones, s Fila) {
 	<li class={ "item", templ.KV("item-solo-lectura", !d.Editables[s.IDSuscripcion]) }>
 		<a class="item-enlace" href={ templ.URL(UrlSuscripciones(d.Mes, d.Busqueda, s.IDSuscripcion, false)) } aria-label={ "Ver detalles de " + s.ServicioNombre }>
@@ -84,16 +84,7 @@ templ ItemSuscripcion(d DatosSuscripciones, s Fila) {
 		</a>
 		if d.Editables[s.IDSuscripcion] {
 			<a class="btn-modificar" href={ templ.URL(UrlSuscripciones(d.Mes, d.Busqueda, s.IDSuscripcion, true)) }>Modificar</a>
-			<form method="post" action={ templ.URL(fmt.Sprintf("/cuenta/suscripciones/%d/estado", s.IDSuscripcion)) } class="form-estado">
-				<input type="hidden" name="mes" value={ d.Mes }/>
-				<input type="hidden" name="q" value={ d.Busqueda }/>
-				<select name="estado" class="select-estado" aria-label={ "Estado de " + s.ServicioNombre }>
-					for _, estado := range []string{"Activa", "Pausada", "Cancelada"} {
-						<option value={ estado } selected?={ estado == s.Estado }>{ estado }</option>
-					}
-				</select>
-				<button type="submit" class="boton-chico">Guardar</button>
-			</form>
+			<span class="estado-fijo">{ textoEstado(s.Estado) }</span>
 			<form method="post" action={ templ.URL(fmt.Sprintf("/cuenta/suscripciones/%d/eliminar", s.IDSuscripcion)) } class="form-eliminar">
 				<input type="hidden" name="mes" value={ d.Mes }/>
 				<input type="hidden" name="q" value={ d.Busqueda }/>
@@ -176,6 +167,14 @@ templ DetalleSuscripcion(d DatosSuscripciones, det Detalle) {
 						<label>
 							Nueva contraseña de la cuenta
 							<input type="password" name="password_cuenta" placeholder="Dejala vacía para no cambiarla" autocomplete="new-password"/>
+						</label>
+						<label>
+							Estado
+							<select name="estado">
+								for _, estado := range []string{"Activa", "Pausada"} {
+									<option value={ estado } selected?={ estado == det.Form.Estado }>{ estado }</option>
+								}
+							</select>
 						</label>
 						if det.ErrorEditar != "" {
 							<p class="detalle-error" role="alert">{ det.ErrorEditar }</p>

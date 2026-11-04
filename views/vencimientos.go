@@ -16,6 +16,7 @@ type Fila = sqlc.ListSubscripcionesUsuarioRow
 type FormModificar struct {
 	Monto         string
 	UsuarioCuenta string
+	Estado        string
 }
 
 // Detalle es la suscripción que se muestra en el recuadro del detalle
@@ -120,7 +121,7 @@ func ArmarCalendario(clave string, suscripciones []Fila, hoy time.Time) []DiaCal
 }
 
 // CuentaParaElGasto: las activas y los períodos que ya vencieron y se
-// renovaron (se pagaron); no las pausadas ni las canceladas
+// renovaron (se pagaron); no las pausadas
 func CuentaParaElGasto(estado string) bool {
 	return estado == "Activa" || estado == "Vencida"
 }

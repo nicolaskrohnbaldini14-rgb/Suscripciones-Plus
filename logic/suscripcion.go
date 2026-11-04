@@ -16,11 +16,11 @@ import (
 // de un servicio, el usuario no confirma bien su propia contraseña
 var ErrPasswordUsuario = fmt.Errorf("la contraseña de tu usuario no es correcta")
 
-// Estados permitidos según las reglas de negocio
+// Estados permitidos según las reglas de negocio. No hay estado "Cancelada":
+// para dejar una suscripción se la elimina.
 var estadosValidos = map[string]bool{
-	"Activa":    true,
-	"Pausada":   true,
-	"Cancelada": true,
+	"Activa":  true,
+	"Pausada": true,
 }
 
 // pregunta si esta bien esto o lo cambiamos en el schema
@@ -54,7 +54,7 @@ func validarCamposSuscripcion(datos sqlc.CreateSubscripcionParams) error {
 	// es una modificación posterior (PUT)
 	est := strings.TrimSpace(datos.Estado)
 	if est != "" && !estadosValidos[est] {
-		return fmt.Errorf("el estado '%s' no es válido (permitidos: Activa, Pausada, Cancelada)", est)
+		return fmt.Errorf("el estado '%s' no es válido (permitidos: Activa y Pausada)", est)
 	}
 	if est != "" && est != "Activa" {
 		return fmt.Errorf("una suscripción nueva se crea siempre en estado Activa")
@@ -184,7 +184,7 @@ func (s *ServicioSuscripcion) Actualizar(ctx context.Context, id int32, entrada 
 	// 2. Validar que el estado sea uno de los permitidos
 	est := strings.TrimSpace(entrada.Estado)
 	if !estadosValidos[est] {
-		return sqlc.Suscripcion{}, fmt.Errorf("el estado '%s' no es válido (permitidos: Activa, Pausada, Cancelada)", est)
+		return sqlc.Suscripcion{}, fmt.Errorf("el estado '%s' no es válido (permitidos: Activa y Pausada)", est)
 	}
 
 	// 3. Validar coherencia de fechas (la fecha de inicio debe ser anterior al vencimiento)
@@ -200,12 +200,10 @@ func (s *ServicioSuscripcion) Actualizar(ctx context.Context, id int32, entrada 
 		entrada.PasswordCuenta = subExistente.PasswordCuenta
 	}
 
-	// 4. Si queda vigente (activa o pausada), no puede repetir la cuenta de
-	// otra suscripción vigente al mismo servicio
-	if est != "Cancelada" {
-		if err := s.verificarCuentaDistinta(ctx, subExistente.IDUsuario, subExistente.IDServicio, entrada.UsuarioCuenta, id, false); err != nil {
-			return sqlc.Suscripcion{}, err
-		}
+	// 4. Activa o pausada sigue vigente: no puede repetir la cuenta de otra
+	// suscripción vigente al mismo servicio
+	if err := s.verificarCuentaDistinta(ctx, subExistente.IDUsuario, subExistente.IDServicio, entrada.UsuarioCuenta, id, false); err != nil {
+		return sqlc.Suscripcion{}, err
 	}
 
 	// 5. Formatear monto y completar los datos que no vienen del body

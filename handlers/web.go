@@ -54,7 +54,6 @@ func (h *Web) Registrar(mux *http.ServeMux) {
 	mux.HandleFunc("GET /cuenta/suscripciones", h.conSesion(h.misSuscripciones))
 	mux.HandleFunc("GET /cuenta/suscripciones/nueva", h.conSesion(h.nuevaSuscripcion))
 	mux.HandleFunc("POST /cuenta/suscripciones", h.conSesion(h.crearSuscripcion))
-	mux.HandleFunc("POST /cuenta/suscripciones/{id}/estado", h.conSesion(h.cambiarEstado))
 	mux.HandleFunc("POST /cuenta/suscripciones/{id}/modificar", h.conSesion(h.modificar))
 	mux.HandleFunc("POST /cuenta/suscripciones/{id}/password", h.conSesion(h.revelarPassword))
 	mux.HandleFunc("POST /cuenta/suscripciones/{id}/eliminar", h.conSesion(h.eliminar))
@@ -115,7 +114,6 @@ func (h *Web) pagina(r *http.Request, titulo, clave string, usr *sqlc.Usuario) v
 var avisosOK = map[string]string{
 	"bienvenida": "¡Listo! Tu cuenta se creó y ya iniciaste sesión.",
 	"creada":     "Suscripción creada.",
-	"estado":     "Estado actualizado.",
 	"modificada": "Suscripción actualizada.",
 	"eliminada":  "Suscripción eliminada.",
 }
@@ -321,7 +319,7 @@ func (h *Web) renderSuscripciones(w http.ResponseWriter, r *http.Request, usr sq
 			if op.FormEditar != nil {
 				det.Form = *op.FormEditar
 			} else {
-				det.Form = views.FormModificar{Monto: s.Monto, UsuarioCuenta: valor(s.UsuarioCuenta)}
+				det.Form = views.FormModificar{Monto: s.Monto, UsuarioCuenta: valor(s.UsuarioCuenta), Estado: s.Estado}
 			}
 			d.Detalle = det
 		}
@@ -428,35 +426,9 @@ func redirigirALista(w http.ResponseWriter, r *http.Request, op opcionesLista, v
 	http.Redirect(w, r, destino+separador+"ok="+aviso, http.StatusSeeOther)
 }
 
-func (h *Web) cambiarEstado(w http.ResponseWriter, r *http.Request, usr sqlc.Usuario) {
-	if !parsearFormulario(w, r) {
-		return
-	}
-	op := opcionesDelFormulario(r)
-	sub, ok := h.suscripcionDelUsuario(w, r, usr, op)
-	if !ok {
-		return
-	}
-
-	// se conservan el monto, el vencimiento y la cuenta; la contraseña no se
-	// envía y la lógica conserva la guardada
-	_, err := h.suscripciones.Actualizar(r.Context(), sub.IDSuscripcion, sqlc.UpdateSubscripcionParams{
-		Monto:            sub.Monto,
-		FechaVencimiento: sub.FechaVencimiento,
-		Estado:           r.FormValue("estado"),
-		UsuarioCuenta:    sub.UsuarioCuenta,
-	})
-	if err != nil {
-		estado, mensaje := describirError(err)
-		op.Aviso = avisoError(mensaje)
-		h.renderSuscripciones(w, r, usr, estado, op)
-		return
-	}
-	redirigirALista(w, r, op, 0, "estado")
-}
-
-// modificar cambia el monto, el usuario y (si se escribe) la contraseña de
-// la cuenta; si falla, vuelve a mostrar el detalle con el error
+// modificar cambia el monto, el usuario, (si se escribe) la contraseña de
+// la cuenta y el estado (activa o pausada); si falla, vuelve a mostrar el
+// detalle con el error
 func (h *Web) modificar(w http.ResponseWriter, r *http.Request, usr sqlc.Usuario) {
 	if !parsearFormulario(w, r) {
 		return
@@ -470,11 +442,16 @@ func (h *Web) modificar(w http.ResponseWriter, r *http.Request, usr sqlc.Usuario
 	form := views.FormModificar{
 		Monto:         strings.TrimSpace(r.FormValue("monto")),
 		UsuarioCuenta: strings.TrimSpace(r.FormValue("usuario_cuenta")),
+		Estado:        r.FormValue("estado"),
+	}
+	// si el formulario no trae el estado, se conserva el que tenía
+	if form.Estado == "" {
+		form.Estado = sub.Estado
 	}
 	_, err := h.suscripciones.Actualizar(r.Context(), sub.IDSuscripcion, sqlc.UpdateSubscripcionParams{
 		Monto:            form.Monto,
 		FechaVencimiento: sub.FechaVencimiento,
-		Estado:           sub.Estado,
+		Estado:           form.Estado,
 		UsuarioCuenta:    texto(form.UsuarioCuenta),
 		PasswordCuenta:   texto(r.FormValue("password_cuenta")),
 	})

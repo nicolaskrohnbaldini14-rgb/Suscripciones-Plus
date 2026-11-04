@@ -8,9 +8,12 @@ header "Content-Type" contains "text/html"
 xpath "normalize-space(//section[@class='portada']/h1)" == "Suscripciones+"
 xpath "count(//a[@href='/login'])" >= 1
 xpath "count(//a[@href='/registro'])" >= 1
-# panel de servicios con las 8 categorías del catálogo, cada una con su logo
-xpath "count(//div[contains(@class,'panel-servicios')]//section[@class='panel-categoria'])" == 8
-xpath "count(//section[@class='panel-categoria']/h3/span[@class='icono-categoria']/*[local-name()='svg'])" == 8
+# panel de servicios con las 10 categorías del catálogo, cada una con su logo
+xpath "count(//div[contains(@class,'panel-servicios')]//section[@class='panel-categoria'])" == 10
+xpath "count(//section[@class='panel-categoria']/h3/span[@class='icono-categoria']/*[local-name()='svg'])" == 10
+# servicios del hogar y seguros
+xpath "count(//section[@class='panel-categoria'][h3[contains(normalize-space(.),'Hogar')]]//*[normalize-space(.)='Luz'])" >= 1
+xpath "count(//section[@class='panel-categoria'][h3[contains(normalize-space(.),'Seguros')]]//*[normalize-space(.)='Seguro de auto'])" >= 1
 xpath "count(//section[@class='panel-categoria']//*[normalize-space(.)='Netflix'])" >= 1
 xpath "count(//section[@class='panel-categoria']//*[normalize-space(.)='Pádel'])" >= 1
 # sin sesión los servicios no son links para suscribirse
