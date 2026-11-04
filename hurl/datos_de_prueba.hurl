@@ -1,17 +1,17 @@
 # Usuarios de prueba del .env (.env.example): se crean al iniciar la app con
 # suscripciones de ejemplo, para poder probarla sin registrarse.
 
-# ---------- Ana entra con los datos del .env ----------
+# ---------- Martina entra con los datos del .env ----------
 POST {{host}}/login
 [Options]
 location: true
 [FormParams]
-email: ana@ejemplo.com
-password: ana12345
+email: martina@ejemplo.com
+password: martina123
 HTTP 200
 [Asserts]
 url == "{{host}}/cuenta"
-xpath "normalize-space(//main//h1)" == "Hola, Ana Prueba"
+xpath "normalize-space(//main//h1)" == "Hola, Martina"
 
 # este mes vencen 5 de sus suscripciones de ejemplo (incluida la renovación
 # automática de OSDE, que venció el mes anterior)
@@ -31,11 +31,11 @@ POST {{host}}/login
 [Options]
 location: true
 [FormParams]
-email: bruno@ejemplo.com
-password: bruno12345
+email: agustina@ejemplo.com
+password: agustina123
 HTTP 200
 [Asserts]
-xpath "normalize-space(//main//h1)" == "Hola, Bruno Prueba"
+xpath "normalize-space(//main//h1)" == "Hola, Agustina"
 
 POST {{host}}/logout
 HTTP 303
@@ -44,11 +44,11 @@ POST {{host}}/login
 [Options]
 location: true
 [FormParams]
-email: carla@ejemplo.com
-password: carla12345
+email: nicolas@ejemplo.com
+password: nicolas123
 HTTP 200
 [Asserts]
-xpath "normalize-space(//main//h1)" == "Hola, Carla Prueba"
+xpath "normalize-space(//main//h1)" == "Hola, Nicolás"
 
 POST {{host}}/logout
 HTTP 303

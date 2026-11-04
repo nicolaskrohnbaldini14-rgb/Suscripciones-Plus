@@ -101,14 +101,14 @@ ejemplo:
 
 | Nombre | Email | Contraseña |
 |---|---|---|
-| Ana Prueba | `ana@ejemplo.com` | `ana12345` |
-| Bruno Prueba | `bruno@ejemplo.com` | `bruno12345` |
-| Carla Prueba | `carla@ejemplo.com` | `carla12345` |
+| Martina | `martina@ejemplo.com` | `martina123` |
+| Agustina | `agustina@ejemplo.com` | `agustina123` |
+| Nicolás | `nicolas@ejemplo.com` | `nicolas123` |
 
 Las suscripciones se arman a partir del mes actual, así que siempre hay
 vencimientos en el mes que se está viendo. Entre las de los tres usuarios hay
 suscripciones con y sin cuenta del servicio, dos cuentas distintas de Netflix
-(Ana), una del mes anterior que se renueva sola al iniciar (OSDE de Ana), una
+(Martina), una del mes anterior que se renueva sola al iniciar (OSDE de Martina), una
 pausada, una cancelada y otras que vencen el mes siguiente.
 
 Se definen en el `.env` como `USUARIO_PRUEBA_1`, `USUARIO_PRUEBA_2`, ... con
