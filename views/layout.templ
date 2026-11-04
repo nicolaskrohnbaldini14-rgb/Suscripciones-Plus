@@ -85,7 +85,8 @@ templ Navegacion(p Pagina) {
 	</nav>
 }
 
-// PanelServicios es el catálogo agrupado por categoría, a pantalla completa
+// PanelServicios es el catálogo agrupado por categoría: lateral desde la
+// barra o grande y centrado al elegir el servicio de una nueva suscripción
 templ PanelServicios(p Pagina) {
 	<div class={ "panel-servicios", templ.KV("abierto", p.Catalogo.Abierto), templ.KV("modo-elegir", p.Catalogo.Elegir) }>
 		<div class="panel-servicios-contenido">
@@ -108,33 +109,53 @@ templ PanelServicios(p Pagina) {
 			</div>
 			<div class="panel-servicios-grilla">
 				for _, grupo := range AgruparPorCategoria(p.Servicios) {
-					<section class="panel-categoria">
-						// solo se ve la categoría; sus servicios aparecen al pasar el cursor
-						// (o al tocarla: el título puede tomar el foco)
-						<h3 tabindex="0">
-							@IconoCategoria(grupo.Categoria)
-							{ grupo.Categoria }
-						</h3>
-						<ul>
-							for _, s := range grupo.Servicios {
-								<li>
-									if p.Sesion != nil {
-										<a
-											href={ templ.URL(fmt.Sprintf("/cuenta/suscripciones/nueva?servicio=%d", s.IDServicio)) }
-											class={ "panel-servicio", templ.KV("elegido", p.Catalogo.Elegir && s.IDServicio == p.Catalogo.IDActual) }
-											title={ "Suscribirme a " + s.Nombre }
-										>{ s.Nombre }</a>
-									} else {
-										<span class="panel-servicio">{ s.Nombre }</span>
-									}
-								</li>
-							}
-						</ul>
-					</section>
+					if p.Catalogo.Elegir {
+						// al elegir el servicio de una nueva suscripción: grilla grande;
+						// los servicios aparecen al pasar el cursor (o al tocar la categoría)
+						<section class="panel-categoria">
+							<h3 tabindex="0">
+								@IconoCategoria(grupo.Categoria)
+								{ grupo.Categoria }
+							</h3>
+							@listaServicios(p, grupo)
+						</section>
+					} else {
+						// desde la barra: panel lateral con las categorías en columna; al
+						// tocar una se despliegan sus servicios y empujan a las demás
+						// hacia abajo. <details> con el mismo "name" deja una abierta por vez
+						<details class="panel-categoria" name="categorias">
+							<summary>
+								<h3>
+									@IconoCategoria(grupo.Categoria)
+									{ grupo.Categoria }
+								</h3>
+							</summary>
+							@listaServicios(p, grupo)
+						</details>
+					}
 				}
 			</div>
 		</div>
 	</div>
+}
+
+// listaServicios: con sesión, cada servicio es un link para suscribirse
+templ listaServicios(p Pagina, grupo GrupoServicios) {
+	<ul>
+		for _, s := range grupo.Servicios {
+			<li>
+				if p.Sesion != nil {
+					<a
+						href={ templ.URL(fmt.Sprintf("/cuenta/suscripciones/nueva?servicio=%d", s.IDServicio)) }
+						class={ "panel-servicio", templ.KV("elegido", p.Catalogo.Elegir && s.IDServicio == p.Catalogo.IDActual) }
+						title={ "Suscribirme a " + s.Nombre }
+					>{ s.Nombre }</a>
+				} else {
+					<span class="panel-servicio">{ s.Nombre }</span>
+				}
+			</li>
+		}
+	</ul>
 }
 
 // GrupoServicios son los servicios de una categoría

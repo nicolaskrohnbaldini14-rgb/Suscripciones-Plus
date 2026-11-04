@@ -1321,3 +1321,106 @@ a.boton-secundario {
 .panel-categoria:focus-within ul {
   display: block;
 }
+
+/* puente invisible debajo del botón "Servicios", para no perder el hover al
+   bajar el cursor hasta el panel */
+.desplegable-boton {
+  position: relative;
+}
+
+.desplegable-boton::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  height: 40px;
+}
+
+/* ---------- Panel desde la barra: lateral, con las categorías en columna ---------- */
+/* al tocar una categoría se despliegan sus servicios y empujan hacia abajo a
+   las demás */
+.panel-servicios:not(.modo-elegir) {
+  right: auto;
+  width: min(24rem, 100vw);
+  padding: 0;
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  animation: deslizar 0.18s ease-out;
+}
+
+.panel-servicios:not(.modo-elegir) .panel-servicios-contenido {
+  min-height: 100%;
+  padding: 20px;
+  border-radius: 0 16px 16px 0;
+  box-shadow: 8px 0 30px rgba(0, 47, 68, 0.45);
+}
+
+.panel-servicios:not(.modo-elegir) .panel-servicios-grilla {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panel-servicios:not(.modo-elegir) .panel-categoria h3 {
+  cursor: pointer;
+}
+
+/* flechita: ▸ plegada, ▾ desplegada */
+.panel-servicios:not(.modo-elegir) .panel-categoria h3::after {
+  content: "▸";
+  margin-left: auto;
+}
+
+.panel-servicios:not(.modo-elegir) .panel-categoria[open] h3::after {
+  content: "▾";
+}
+
+/* el <summary> no muestra su triángulo: la flechita la dibuja el título */
+.panel-categoria summary {
+  display: block;
+  list-style: none;
+}
+
+.panel-categoria summary::-webkit-details-marker {
+  display: none;
+}
+
+/* los servicios quedan dentro de la columna (no flotan encima) */
+.panel-servicios:not(.modo-elegir) .panel-categoria ul {
+  display: none;
+  position: static;
+  max-height: none;
+  padding: 4px 0 4px 12px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.panel-servicios:not(.modo-elegir) .panel-categoria[open] ul {
+  display: block;
+}
+
+@keyframes deslizar {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* ---------- Panel para elegir el servicio de una nueva suscripción ---------- */
+/* sigue siendo grande, pero del tamaño de su contenido y centrado */
+.panel-servicios.modo-elegir.abierto {
+  display: flex;
+}
+
+.panel-servicios.modo-elegir .panel-servicios-contenido {
+  width: 100%;
+  max-width: 62rem;
+  min-height: 0;
+  margin: auto;
+}

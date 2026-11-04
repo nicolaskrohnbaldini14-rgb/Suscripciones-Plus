@@ -12,9 +12,10 @@ tiene las mismas funciones que la versión final del TP4:
 
 - **Inicio (`/`)**: portada centrada con los botones **Iniciar sesión** y
   **Registrarse**.
-- **Barra superior**: el botón **Servicios ▾** abre un panel a pantalla
-  completa con el catálogo agrupado por categoría (cada una con su logo). Con
-  la sesión iniciada, cada servicio lleva a suscribirse a él.
+- **Barra superior**: el botón **Servicios ▾** abre un panel lateral con las
+  categorías del catálogo una debajo de la otra (cada una con su logo); al
+  tocar una se despliegan sus servicios. Con la sesión iniciada, cada servicio
+  lleva a suscribirse a él.
 - **Mi cuenta**: *"Hola, {nombre}"*, cuánto vence en el mes actual y dos
   opciones: **ver las suscripciones** o **crear una nueva**.
 - **Mis suscripciones**: las que vencen en el mes (por defecto el actual), con
@@ -171,8 +172,8 @@ Navegador ──(GET de páginas, POST de formularios + cookie de sesión)──
 
 | Función | Cómo |
 |---|---|
-| Panel de servicios | CSS: se abre con `:hover` / `:focus-within` sobre **Servicios ▾** y queda abierto mientras el cursor esté encima. Muestra solo las categorías; los servicios de cada una se despliegan al pasar el cursor por ella (o al tocarla), también con `:hover` / `:focus-within`. |
-| Elegir el servicio desde el formulario | *Elegir desde el catálogo* abre `?catalogo=1`, que dibuja el panel abierto en modo "elegir" con el servicio actual resaltado. |
+| Panel de servicios | CSS: se abre con `:hover` / `:focus-within` sobre **Servicios ▾** y queda abierto mientras el cursor esté encima. Es un panel lateral con las categorías en columna; cada una es un `<details>` (todos con el mismo `name`, así queda una abierta por vez): al tocarla se despliegan sus servicios y empujan a las demás hacia abajo, sin JavaScript. |
+| Elegir el servicio desde el formulario | *Elegir desde el catálogo* abre `?catalogo=1`, que dibuja el catálogo en grande y centrado, en modo "elegir", con las categorías en grilla (los servicios aparecen al pasar el cursor, con `:hover` / `:focus-within`) y el servicio actual resaltado. |
 | Vencimientos por mes | `?mes=AAAA-MM`; el servidor filtra y arma los links al mes anterior y al siguiente. |
 | Buscador | Formulario `GET ?q=`: el servidor filtra por servicio, categoría o cuenta. |
 | Calendario | Se arma en Go (`ArmarCalendario`); el cartel de cada día marcado se muestra con CSS al pasar el cursor. |

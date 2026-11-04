@@ -22,6 +22,16 @@ xpath "count(//select[@name='id_servicio']/optgroup)" == 10
 xpath "count(//select[@name='estado'])" == 0
 xpath "count(//select[@name='id_usuario'])" == 0
 
+# "Elegir desde el catálogo": el catálogo grande y centrado, con las categorías
+# en grilla (los servicios aparecen al pasar el cursor), con Netflix resaltado
+GET {{host}}/cuenta/suscripciones/nueva?catalogo=1&servicio={{netflix_id}}
+HTTP 200
+[Asserts]
+xpath "count(//div[contains(@class,'panel-servicios') and contains(@class,'modo-elegir') and contains(@class,'abierto')])" == 1
+xpath "count(//div[contains(@class,'modo-elegir')]//section[@class='panel-categoria'])" == 10
+xpath "count(//div[contains(@class,'modo-elegir')]//details)" == 0
+xpath "normalize-space(//a[contains(@class,'panel-servicio') and contains(@class,'elegido')])" == "Netflix"
+
 
 # ---------- 1. Crear suscripción: redirige al mes en que vence (303) ----------
 POST {{host}}/cuenta/suscripciones
