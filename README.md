@@ -58,6 +58,31 @@ y editar `.env`. Lo usan:
   `.env` con [godotenv](https://github.com/joho/godotenv) y arman la URL de
   conexión. Si una variable ya está definida en el sistema, tiene prioridad.
 
+## Usuarios de prueba
+
+Para probar la app sin registrarse, el `.env.example` trae tres usuarios que
+la app crea al iniciar (si no existen), cada uno con varias suscripciones de
+ejemplo:
+
+| Nombre | Email | Contraseña |
+|---|---|---|
+| Ana Prueba | `ana@ejemplo.com` | `ana12345` |
+| Bruno Prueba | `bruno@ejemplo.com` | `bruno12345` |
+| Carla Prueba | `carla@ejemplo.com` | `carla12345` |
+
+Las suscripciones se arman a partir del mes actual, así que siempre hay
+vencimientos en el mes que se está viendo. Entre las de los tres usuarios hay
+suscripciones con y sin cuenta del servicio, dos cuentas distintas de Netflix
+(Ana), una del mes anterior que se renueva sola al iniciar (OSDE de Ana), una
+pausada, una cancelada y otras que vencen el mes siguiente.
+
+Se definen en el `.env` como `USUARIO_PRUEBA_1`, `USUARIO_PRUEBA_2`, ... con
+el formato `nombre|email|contraseña`; se pueden agregar más o desactivarlos
+con `CARGAR_USUARIOS_DE_PRUEBA=false`. La carga está en
+[`logic/datos_de_prueba.go`](logic/datos_de_prueba.go) y usa los mismos
+servicios de la app, así que pasa por las mismas validaciones y las
+contraseñas se guardan hasheadas.
+
 ## Esperas
 
 - **Base de datos:** `docker compose up --wait` espera el healthcheck
@@ -377,6 +402,7 @@ de las acciones protegidas.
 | `servicio.hurl` | Catálogo precargado (servicios y categorías, incluida Deportes) y `405` al intentar crear, modificar o borrar servicios. |
 | `suscripcion.hurl` | CRUD de suscripciones, varias suscripciones al mismo servicio con cuentas distintas, alta sin credenciales, `400` al crearlas pausadas o canceladas, renovación automática con el mismo plazo, `403` al modificar períodos vencidos, `404` sobre suscripciones ajenas y `401` sin sesión. |
 | `pago.hurl` | Pagos sobre suscripciones propias, `404` sobre pagos ajenos y `401` sin sesión. |
+| `datos_de_prueba.hurl` | Que los usuarios de prueba del `.env` puedan entrar y tengan sus suscripciones de ejemplo (incluida la renovación automática). |
 
 # Estructura del proyecto
 
@@ -398,7 +424,8 @@ de las acciones protegidas.
 │   ├── usuario.go
 │   ├── servicio.go
 │   ├── suscripcion.go
-│   └── pago.go
+│   ├── pago.go
+│   └── datos_de_prueba.go # Usuarios de prueba del .env con suscripciones de ejemplo
 ├── db/
 │   ├── schema/schema.sql # Tablas y claves foráneas
 │   ├── queries/queries.sql
@@ -408,7 +435,8 @@ de las acciones protegidas.
 │   ├── pago.hurl
 │   ├── servicio.hurl
 │   ├── suscripcion.hurl
-│   └── usuario.hurl
+│   ├── usuario.hurl
+│   └── datos_de_prueba.hurl
 ├── docker-compose.yml    # PostgreSQL con healthcheck (credenciales del .env)
 ├── .env.example          # Variables de entorno de ejemplo (el .env no se versiona)
 ├── .gitignore

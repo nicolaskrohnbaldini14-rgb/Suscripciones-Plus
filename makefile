@@ -1,6 +1,6 @@
 APP_NAME := Tp4-Krohn-Trapani-Cicopiedi
 HOST := http://localhost:8080
-HURL_FILES := hurl/frontend.hurl hurl/usuario.hurl hurl/servicio.hurl hurl/suscripcion.hurl hurl/pago.hurl
+HURL_FILES := hurl/frontend.hurl hurl/usuario.hurl hurl/servicio.hurl hurl/suscripcion.hurl hurl/pago.hurl hurl/datos_de_prueba.hurl
 # segundos máximos que se espera a que la aplicación responda
 ESPERA_APP := 60
 
