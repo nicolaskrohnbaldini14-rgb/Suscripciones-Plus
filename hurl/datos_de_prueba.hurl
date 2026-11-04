@@ -1,21 +1,21 @@
 # Usuarios de prueba del .env (.env.example): se crean al iniciar la app con
 # suscripciones de ejemplo, para poder probarla sin registrarse.
 
-# ---------- Ana entra con los datos del .env ----------
+# ---------- Martina entra con los datos del .env ----------
 POST {{host}}/sesion
 Content-Type: application/json
 {
-  "email": "ana@ejemplo.com",
-  "password": "ana12345"
+  "email": "martina@ejemplo.com",
+  "password": "martina123"
 }
 HTTP 200
 [Captures]
-ana_id: jsonpath "$.id_usuario"
+martina_id: jsonpath "$.id_usuario"
 [Asserts]
-jsonpath "$.nombre" == "Ana Prueba"
+jsonpath "$.nombre" == "Martina"
 
 # 6 suscripciones de ejemplo + la renovación automática de la del mes anterior
-GET {{host}}/suscripciones/usuario/{{ana_id}}
+GET {{host}}/suscripciones/usuario/{{martina_id}}
 HTTP 200
 [Asserts]
 jsonpath "$" count == 7
@@ -33,12 +33,12 @@ HTTP 204
 POST {{host}}/sesion
 Content-Type: application/json
 {
-  "email": "bruno@ejemplo.com",
-  "password": "bruno12345"
+  "email": "agustina@ejemplo.com",
+  "password": "agustina123"
 }
 HTTP 200
 [Asserts]
-jsonpath "$.nombre" == "Bruno Prueba"
+jsonpath "$.nombre" == "Agustina"
 
 DELETE {{host}}/sesion
 HTTP 204
@@ -46,12 +46,12 @@ HTTP 204
 POST {{host}}/sesion
 Content-Type: application/json
 {
-  "email": "carla@ejemplo.com",
-  "password": "carla12345"
+  "email": "nicolas@ejemplo.com",
+  "password": "nicolas123"
 }
 HTTP 200
 [Asserts]
-jsonpath "$.nombre" == "Carla Prueba"
+jsonpath "$.nombre" == "Nicolás"
 
 DELETE {{host}}/sesion
 HTTP 204
