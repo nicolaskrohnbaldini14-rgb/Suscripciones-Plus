@@ -115,13 +115,16 @@ La aplicación está separada en páginas según quién la usa:
 | `login.html` | Todos | Inicio de sesión. |
 | `registro.html` | Todos | Registro de usuarios. |
 | `cuenta.html` | Con sesión | *"Hola, {nombre}"*, resumen de lo que vence este mes y dos opciones: ver las suscripciones o crear una nueva. |
-| `suscripciones.html` | Con sesión | Suscripciones que **vencen en el mes** (por defecto el actual) con el gasto activo de ese mes, un **buscador**, un selector para pausarlas, cancelarlas o reactivarlas y botón para eliminar. Abajo, links al mes anterior y al siguiente (`?mes=AAAA-MM`); al costado, un calendario del mes con los días de vencimiento marcados. Los **meses anteriores son solo de lectura**. |
+| `suscripciones.html` | Con sesión | Suscripciones que **vencen en el mes** (por defecto el actual) con el gasto del mes, un **buscador**, el botón *Modificar* (monto, cuenta y estado: activa o pausada) y el botón para eliminar. Abajo, links al mes anterior y al siguiente (`?mes=AAAA-MM`); al costado, un calendario del mes con los días de vencimiento marcados. Los **meses anteriores son solo de lectura**. |
 | `nueva-suscripcion.html` | Con sesión | Formulario de alta: servicio del catálogo (agrupado por categoría; con `?servicio={id}` viene preseleccionado), monto y fechas; usuario y contraseña de la cuenta son opcionales (salvo para diferenciar una segunda suscripción al mismo servicio). La suscripción se crea siempre **Activa**. |
 
 Todas las páginas tienen en la barra superior el botón **Servicios ▾**: al
 pasar el cursor (o tocarlo en el celular) se abre un panel que ocupa toda la
-pantalla debajo de la barra, con el catálogo agrupado por categoría (cada
-categoría con su ícono, dibujado en SVG en `app.js`). Los mismos íconos
+pantalla debajo de la barra, con las categorías del catálogo (cada una con
+su ícono, dibujado en SVG en `app.js`). Al principio solo se ven los nombres
+de las categorías; al pasar el cursor por una (o tocarla en el celular) se
+despliegan sus servicios, encima del resto y sin mover la grilla (CSS con
+`:hover` y `:focus-within`). Los mismos íconos
 aparecen al lado de cada suscripción en *Mis suscripciones*. Lo
 completa `app.js` con `GET /servicios`. Con la sesión iniciada, cada servicio
 es un link a `nueva-suscripcion.html?servicio={id}`, que abre el formulario
@@ -168,8 +171,13 @@ Funcionamiento de `app.js`:
   vuelve a pedir la lista completa.
 - **Vencimientos por mes:** `suscripciones.html` pide todas las suscripciones
   del usuario y muestra solo las que vencen en el mes elegido (por defecto el
-  actual, o el de `?mes=AAAA-MM`). El *gasto mensual activo* suma solo las
-  suscripciones **activas** de ese mes. Debajo de la lista hay links al mes
+  actual, o el de `?mes=AAAA-MM`). Arriba de la lista se muestra el gasto:
+  - en el **mes actual** (y los siguientes), *Gasto mensual (activo)*: solo
+    lo que **falta pagar**, es decir, las suscripciones activas que todavía
+    no vencieron (lo que ya venció este mes no se suma);
+  - en un **mes anterior**, *Gasto mensual*: todo lo que venció ese mes.
+
+  Las pausadas no suman nunca. Debajo de la lista hay links al mes
   anterior y al siguiente, que muestran lo mismo para ese mes.
 - **Calendario:** al costado de la lista se dibuja la grilla del mes (de lunes
   a domingo, con el día de hoy recuadrado). Los días con vencimientos tienen un

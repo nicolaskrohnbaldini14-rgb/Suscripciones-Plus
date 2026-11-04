@@ -106,6 +106,28 @@ function totalActivo(suscripciones) {
   return suscripciones.filter(cuentaParaElGasto).reduce((suma, s) => suma + Number(s.monto), 0);
 }
 
+// fecha de hoy como "AAAA-MM-DD", para comparar con los vencimientos
+function fechaDeHoy() {
+  const hoy = new Date();
+  return `${claveMes(hoy)}-${String(hoy.getDate()).padStart(2, "0")}`;
+}
+
+// textoGasto arma el gasto que se muestra arriba de la lista:
+// - en un mes anterior, "Gasto mensual" con todo lo que venció ese mes;
+// - en el mes actual (y los siguientes), "Gasto mensual (activo)" con solo
+//   lo que falta pagar: las activas que todavía no vencieron.
+// Las pausadas no suman nunca.
+function textoGasto(suscripciones, mes) {
+  if (mes < mesActual()) {
+    return `Gasto mensual: ${formatoPesos.format(totalActivo(suscripciones))}`;
+  }
+  const hoy = fechaDeHoy();
+  const pendiente = suscripciones
+    .filter((s) => s.estado === "Activa" && s.fecha_vencimiento.slice(0, 10) >= hoy)
+    .reduce((suma, s) => suma + Number(s.monto), 0);
+  return `Gasto mensual (activo): ${formatoPesos.format(pendiente)}`;
+}
+
 // texto del estado para mostrar: un período "Vencida" ya se renovó
 function textoEstado(estado) {
   return estado === "Vencida" ? "Vencida (renovada)" : estado;
@@ -482,7 +504,10 @@ async function cargarMenuServicios(sesion) {
     for (const [categoria, lista] of agruparPorCategoria(servicios)) {
       const columna = document.createElement("section");
       columna.className = "panel-categoria";
+      // solo se ve la categoría; sus servicios aparecen al pasar el cursor
+      // (o al tocarla: el título puede tomar el foco)
       const titulo = document.createElement("h3");
+      titulo.tabIndex = 0;
       titulo.append(iconoCategoria(categoria), categoria);
       const ul = document.createElement("ul");
       for (const s of lista) {
@@ -603,8 +628,6 @@ async function paginaSuscripciones(sesion) {
   const anterior = sumarMeses(mes, -1);
   const siguiente = sumarMeses(mes, 1);
 
-  document.getElementById("titulo-mes").textContent =
-    mes === mesActual() ? `Vencimientos de este mes: ${nombreMes(mes)}` : `Vencimientos de ${nombreMes(mes)}`;
   document.getElementById("calendario-titulo").textContent = nombreMes(mes);
 
   const linkAnterior = document.getElementById("mes-anterior");
@@ -623,8 +646,7 @@ async function paginaSuscripciones(sesion) {
 
     pintarCalendario(document.getElementById("calendario"), mes, suscripciones);
 
-    // el gasto suma solo las suscripciones activas (o ya renovadas) del mes
-    total.textContent = `Gasto mensual activo de ${nombreMes(mes)}: ${formatoPesos.format(totalActivo(suscripciones))}`;
+    total.textContent = textoGasto(suscripciones, mes);
 
     if (suscripciones.length === 0) {
       if (buscador) buscador.disabled = true;
@@ -983,7 +1005,7 @@ const paginas = {
 // Versión de las páginas HTML. Si el navegador muestra una copia vieja
 // guardada (sin esta versión), se recarga una sola vez para pedir la nueva:
 // al recargar, el navegador consulta al servidor.
-const VERSION_PAGINAS = "2026-11-04";
+const VERSION_PAGINAS = "2026-11-04b";
 
 function recargarSiEstaDesactualizada() {
   const meta = document.querySelector('meta[name="version-pagina"]');
