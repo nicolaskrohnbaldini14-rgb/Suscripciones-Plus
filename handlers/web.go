@@ -291,9 +291,14 @@ func (h *Web) renderSuscripciones(w http.ResponseWriter, r *http.Request, usr sq
 		Suscripciones: buscar(delMes, op.Busqueda),
 		HayEnElMes:    len(delMes) > 0,
 		HayAlguna:     len(todas) > 0,
-		Total:         views.TotalActivo(delMes),
 		Calendario:    views.ArmarCalendario(op.Mes, delMes, time.Now()),
 		Editables:     map[int32]bool{},
+	}
+	// mes anterior: todo lo que venció; mes actual o siguientes: lo que falta pagar
+	if d.SoloLectura {
+		d.Total = views.TotalActivo(delMes)
+	} else {
+		d.Total = views.GastoPendiente(delMes, time.Now())
 	}
 	d.NombreAnterior = views.NombreMes(d.MesAnterior)
 	d.NombreSiguiente = views.NombreMes(d.MesSiguiente)

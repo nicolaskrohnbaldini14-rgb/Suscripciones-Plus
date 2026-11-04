@@ -120,7 +120,7 @@ func TestMisSuscripcionesPage_Editable(t *testing.T) {
 		`action="/cuenta/suscripciones/5/eliminar"`,
 		"Modificar",
 		`name="q"`,
-		"Gasto mensual activo de octubre de 2026: $ 32.000,00",
+		"Gasto mensual (activo): $ 32.000,00",
 		"Vence el 28:",
 	)
 	// la lista no muestra la cuenta ni las fechas (están en el detalle) y el
@@ -232,5 +232,27 @@ func TestFormatearNumero(t *testing.T) {
 		if obtenido := formatearNumero(valor); obtenido != esperado {
 			t.Errorf("formatearNumero(%v) = %q, se esperaba %q", valor, obtenido, esperado)
 		}
+	}
+}
+
+func TestGastoPendiente(t *testing.T) {
+	fila := func(estado, monto string, vence time.Time) Fila {
+		return Fila{Estado: estado, Monto: monto, FechaVencimiento: vence}
+	}
+	subs := []Fila{
+		fila("Activa", "1000", fecha(2026, 11, 2)),   // ya venció este mes: no se cuenta
+		fila("Activa", "2000", fecha(2026, 11, 4)),   // vence hoy: falta pagarla
+		fila("Activa", "3000", fecha(2026, 11, 20)),  // falta pagarla
+		fila("Pausada", "4000", fecha(2026, 11, 25)), // pausada: no suma
+		fila("Vencida", "5000", fecha(2026, 11, 1)),  // período ya renovado (pagado)
+	}
+	hoy := time.Date(2026, 11, 4, 15, 30, 0, 0, time.Local)
+
+	if obtenido := GastoPendiente(subs, hoy); obtenido != "$ 5.000,00" {
+		t.Errorf("GastoPendiente = %s, se esperaba $ 5.000,00 (solo lo que falta pagar)", obtenido)
+	}
+	// en un mes anterior se cuenta todo lo que venció (activas y renovadas)
+	if obtenido := TotalActivo(subs); obtenido != "$ 11.000,00" {
+		t.Errorf("TotalActivo = %s, se esperaba $ 11.000,00", obtenido)
 	}
 }

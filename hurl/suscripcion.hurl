@@ -45,7 +45,7 @@ sub_id: xpath "string(//li[.//strong[starts-with(normalize-space(.),'Netflix —
 [Asserts]
 xpath "normalize-space(//div[contains(@class,'mensaje')])" == "Suscripción creada."
 xpath "count(//li[contains(@class,'item')]//span[@class='icono-categoria'])" == 1
-xpath "normalize-space(//p[@class='total'])" == "Gasto mensual activo de diciembre de 2026: $ 1.500,00"
+xpath "normalize-space(//p[@class='total'])" == "Gasto mensual (activo): $ 1.500,00"
 body not contains "cuenta@test.com"
 body not contains "clavecuenta"
 
@@ -98,7 +98,7 @@ HTTP 200
 sub_otra_id: xpath "string(//li[.//strong[starts-with(normalize-space(.),'Netflix — $ 900,00')]]//a[@class='item-enlace']/@href)" regex "ver=(\\d+)"
 [Asserts]
 xpath "count(//ul[@id='lista-suscripciones']/li[contains(@class,'item')])" == 3
-xpath "normalize-space(//p[@class='total'])" == "Gasto mensual activo de diciembre de 2026: $ 17.400,00"
+xpath "normalize-space(//p[@class='total'])" == "Gasto mensual (activo): $ 17.400,00"
 # el calendario marca los días 15 y 31
 xpath "count(//div[contains(@class,'cal-con-vencimiento')])" == 2
 
@@ -255,7 +255,7 @@ HTTP 200
 [Asserts]
 xpath "normalize-space(//li[.//a[contains(@href,'ver={{sub_id}}')]]//span[@class='estado-fijo'])" == "Pausada"
 # la pausada no cuenta para el gasto
-xpath "normalize-space(//p[@class='total'])" == "Gasto mensual activo de diciembre de 2026: $ 15.900,00"
+xpath "normalize-space(//p[@class='total'])" == "Gasto mensual (activo): $ 15.900,00"
 
 # al volver a modificar, el formulario muestra el estado actual
 GET {{host}}/cuenta/suscripciones?mes=2026-12&ver={{sub_id}}&editar=1
@@ -321,6 +321,8 @@ sub_vieja_id: xpath "string(//li[.//strong[starts-with(normalize-space(.),'Spoti
 [Asserts]
 xpath "count(//p[@class='aviso-lectura'])" == 1
 xpath "normalize-space(//li[contains(@class,'item-solo-lectura')]//span[@class='estado-fijo'])" == "Vencida (renovada)"
+# en un mes anterior el gasto es todo lo que venció (sin "(activo)")
+xpath "normalize-space(//p[@class='total'])" == "Gasto mensual: $ 2.900,00"
 # en un mes anterior no hay botones para modificar ni eliminar
 xpath "count(//a[@class='btn-modificar'])" == 0
 xpath "count(//form[contains(@action,'/eliminar')])" == 0

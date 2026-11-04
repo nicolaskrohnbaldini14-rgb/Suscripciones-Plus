@@ -17,13 +17,6 @@ templ contenidoMisSuscripciones(d DatosSuscripciones) {
 	<div class="titulo-con-accion">
 		<div>
 			<h1>Mis suscripciones</h1>
-			<p class="lema">
-				if d.EsMesActual {
-					Vencimientos de este mes: { d.NombreMes }
-				} else {
-					Vencimientos de { d.NombreMes }
-				}
-			</p>
 		</div>
 		<a href="/cuenta/suscripciones/nueva" class="boton">Nueva suscripción</a>
 	</div>
@@ -32,7 +25,12 @@ templ contenidoMisSuscripciones(d DatosSuscripciones) {
 			if d.SoloLectura {
 				<p class="aviso-lectura">Estás viendo un mes anterior: estas suscripciones son solo de lectura.</p>
 			}
-			<p class="total">Gasto mensual activo de { d.NombreMes }: { d.Total }</p>
+			// en un mes anterior es todo lo que venció; en el actual, lo que falta pagar
+			if d.SoloLectura {
+				<p class="total">Gasto mensual: { d.Total }</p>
+			} else {
+				<p class="total">Gasto mensual (activo): { d.Total }</p>
+			}
 			if d.HayEnElMes {
 				<form method="get" action="/cuenta/suscripciones" class="buscador-form">
 					<input type="hidden" name="mes" value={ d.Mes }/>
@@ -132,7 +130,6 @@ templ Calendario(d DatosSuscripciones) {
 				}
 			}
 		</div>
-		<p class="calendario-ayuda">Pasá el cursor por un día marcado para ver qué vence.</p>
 	</aside>
 }
 

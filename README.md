@@ -171,7 +171,7 @@ Navegador ──(GET de páginas, POST de formularios + cookie de sesión)──
 
 | Función | Cómo |
 |---|---|
-| Panel de servicios | CSS: se abre con `:hover` / `:focus-within` sobre **Servicios ▾** y queda abierto mientras el cursor esté encima. |
+| Panel de servicios | CSS: se abre con `:hover` / `:focus-within` sobre **Servicios ▾** y queda abierto mientras el cursor esté encima. Muestra solo las categorías; los servicios de cada una se despliegan al pasar el cursor por ella (o al tocarla), también con `:hover` / `:focus-within`. |
 | Elegir el servicio desde el formulario | *Elegir desde el catálogo* abre `?catalogo=1`, que dibuja el panel abierto en modo "elegir" con el servicio actual resaltado. |
 | Vencimientos por mes | `?mes=AAAA-MM`; el servidor filtra y arma los links al mes anterior y al siguiente. |
 | Buscador | Formulario `GET ?q=`: el servidor filtra por servicio, categoría o cuenta. |
@@ -301,7 +301,7 @@ borrar servicios desde la aplicación.
   - Se puede tener **varias suscripciones al mismo servicio** si son cuentas distintas: desde la segunda (mientras la otra siga activa o pausada) hay que indicar el usuario de la cuenta, y no se puede repetir uno en uso (sin distinguir mayúsculas).
   - **Renovación automática:** cuando una suscripción activa vence, se renueva sola por el mismo plazo con el que se registró (un mes, un año, etc.). El período vencido queda como historial con estado `Vencida` y se crea uno nuevo con el mismo monto y la misma cuenta. Se hace al iniciar la app y cada vez que se listan las suscripciones. Las pausadas no se renuevan.
   - Las suscripciones `Vencida` y las que vencen en un mes anterior al actual son de **solo lectura**.
-  - El *gasto mensual activo* suma las suscripciones activas del mes y los períodos que ya se renovaron.
+  - En el mes actual (y los siguientes), el *Gasto mensual (activo)* suma solo lo que **falta pagar**: las suscripciones activas que todavía no vencieron (`GastoPendiente`). En un mes anterior, el *Gasto mensual* suma todo lo que venció ese mes: las activas y los períodos que ya se renovaron (`TotalActivo`). Las pausadas no suman nunca.
 - **Pagos:** la suscripción tiene que existir, el monto tiene que ser mayor a cero y la fecha de pago no puede ser posterior al vencimiento de la suscripción.
 
 # Pruebas

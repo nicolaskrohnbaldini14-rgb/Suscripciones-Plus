@@ -127,10 +127,25 @@ func CuentaParaElGasto(estado string) bool {
 }
 
 // TotalActivo suma el monto de las suscripciones que cuentan para el gasto
+// (es el gasto de un mes anterior: todo lo que venció ese mes)
 func TotalActivo(suscripciones []Fila) string {
+	return sumarMontos(suscripciones, func(s Fila) bool { return CuentaParaElGasto(s.Estado) })
+}
+
+// GastoPendiente suma lo que falta pagar desde hoy: las suscripciones activas
+// que todavía no vencieron (lo que ya venció en el mes no se cuenta). Es el
+// gasto que se muestra en el mes actual y en los siguientes.
+func GastoPendiente(suscripciones []Fila, hoy time.Time) string {
+	dia := time.Date(hoy.Year(), hoy.Month(), hoy.Day(), 0, 0, 0, 0, time.UTC)
+	return sumarMontos(suscripciones, func(s Fila) bool {
+		return s.Estado == "Activa" && !s.FechaVencimiento.Before(dia)
+	})
+}
+
+func sumarMontos(suscripciones []Fila, cuenta func(Fila) bool) string {
 	total := 0.0
 	for _, s := range suscripciones {
-		if !CuentaParaElGasto(s.Estado) {
+		if !cuenta(s) {
 			continue
 		}
 		if monto, err := strconv.ParseFloat(s.Monto, 64); err == nil {

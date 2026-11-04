@@ -493,6 +493,7 @@ section > h2 {
 
 .titulo-con-accion h1 {
   margin: 0;
+  font-size: 2.4rem;
 }
 
 /* ---------- Vencimientos del mes: lista + calendario al costado ---------- */
@@ -1270,4 +1271,53 @@ a.boton-secundario {
   .item .btn-modificar {
     margin-left: 0;
   }
+}
+
+/* ---------- Catálogo: solo las categorías; los servicios al pasar el cursor ---------- */
+.panel-categoria {
+  position: relative;
+}
+
+.panel-categoria h3 {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: var(--campo);
+  cursor: default;
+}
+
+.panel-categoria:hover h3,
+.panel-categoria:focus-within h3 {
+  background: var(--primario);
+  border-color: var(--primario);
+  color: var(--crema);
+}
+
+.panel-categoria:hover h3 .icono-categoria,
+.panel-categoria:focus-within h3 .icono-categoria {
+  background: var(--crema);
+  color: var(--primario);
+}
+
+/* los servicios se despliegan encima de lo de abajo, sin mover la grilla */
+.panel-categoria ul {
+  display: none;
+  position: absolute;
+  top: calc(100% - 4px);
+  left: 0;
+  right: 0;
+  z-index: 5;
+  max-height: 18rem;
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 8px 20px rgba(0, 47, 68, 0.3);
+}
+
+.panel-categoria:hover ul,
+.panel-categoria:focus-within ul {
+  display: block;
 }

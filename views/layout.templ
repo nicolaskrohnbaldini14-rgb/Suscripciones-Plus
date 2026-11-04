@@ -109,7 +109,9 @@ templ PanelServicios(p Pagina) {
 			<div class="panel-servicios-grilla">
 				for _, grupo := range AgruparPorCategoria(p.Servicios) {
 					<section class="panel-categoria">
-						<h3>
+						// solo se ve la categoría; sus servicios aparecen al pasar el cursor
+						// (o al tocarla: el título puede tomar el foco)
+						<h3 tabindex="0">
 							@IconoCategoria(grupo.Categoria)
 							{ grupo.Categoria }
 						</h3>
