@@ -85,8 +85,9 @@ templ Navegacion(p Pagina) {
 	</nav>
 }
 
-// PanelServicios es el catálogo agrupado por categoría: lateral desde la
-// barra o grande y centrado al elegir el servicio de una nueva suscripción
+// PanelServicios es el catálogo agrupado por categoría: debajo del botón
+// "Servicios" desde la barra, o grande y centrado al elegir el servicio de
+// una nueva suscripción
 templ PanelServicios(p Pagina) {
 	<div class={ "panel-servicios", templ.KV("abierto", p.Catalogo.Abierto), templ.KV("modo-elegir", p.Catalogo.Elegir) }>
 		<div class="panel-servicios-contenido">
@@ -109,30 +110,19 @@ templ PanelServicios(p Pagina) {
 			</div>
 			<div class="panel-servicios-grilla">
 				for _, grupo := range AgruparPorCategoria(p.Servicios) {
-					if p.Catalogo.Elegir {
-						// al elegir el servicio de una nueva suscripción: grilla grande;
-						// los servicios aparecen al pasar el cursor (o al tocar la categoría)
-						<section class="panel-categoria">
-							<h3 tabindex="0">
+					// al hacer clic en una categoría se despliegan sus servicios: desde
+					// la barra empujan a las demás hacia abajo; al elegir el servicio de
+					// una nueva suscripción aparecen encima de la grilla. <details> con
+					// el mismo "name" deja una abierta por vez
+					<details class="panel-categoria" name="categorias">
+						<summary>
+							<h3>
 								@IconoCategoria(grupo.Categoria)
 								{ grupo.Categoria }
 							</h3>
-							@listaServicios(p, grupo)
-						</section>
-					} else {
-						// desde la barra: panel lateral con las categorías en columna; al
-						// tocar una se despliegan sus servicios y empujan a las demás
-						// hacia abajo. <details> con el mismo "name" deja una abierta por vez
-						<details class="panel-categoria" name="categorias">
-							<summary>
-								<h3>
-									@IconoCategoria(grupo.Categoria)
-									{ grupo.Categoria }
-								</h3>
-							</summary>
-							@listaServicios(p, grupo)
-						</details>
-					}
+						</summary>
+						@listaServicios(p, grupo)
+					</details>
 				}
 			</div>
 		</div>

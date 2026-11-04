@@ -34,11 +34,11 @@ templ contenidoMisSuscripciones(d DatosSuscripciones) {
 			if d.HayEnElMes {
 				<form method="get" action="/cuenta/suscripciones" class="buscador-form">
 					<input type="hidden" name="mes" value={ d.Mes }/>
-					<label class="buscador">
-						Buscar en este mes
-						<input type="search" name="q" value={ d.Busqueda } placeholder="Servicio, categoría o cuenta…" autocomplete="off"/>
-					</label>
-					<button type="submit" class="boton-chico">Buscar</button>
+					// la lupa (dibujada con CSS) es el botón para buscar; también busca con Enter
+					<div class="buscador">
+						<input type="search" name="q" value={ d.Busqueda } placeholder="Servicio, categoría o cuenta…" autocomplete="off" aria-label="Buscar en este mes"/>
+						<button type="submit" class="buscador-lupa" aria-label="Buscar"></button>
+					</div>
 					if d.Busqueda != "" {
 						<a href={ templ.URL(UrlSuscripciones(d.Mes, "", 0, false)) } class="boton-secundario boton-chico">Limpiar</a>
 					}

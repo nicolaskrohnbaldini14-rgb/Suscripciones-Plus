@@ -12,9 +12,9 @@ tiene las mismas funciones que la versión final del TP4:
 
 - **Inicio (`/`)**: portada centrada con los botones **Iniciar sesión** y
   **Registrarse**.
-- **Barra superior**: el botón **Servicios ▾** abre un panel lateral con las
+- **Barra superior**: el botón **Servicios ▾** despliega, justo debajo, las
   categorías del catálogo una debajo de la otra (cada una con su logo); al
-  tocar una se despliegan sus servicios. Con la sesión iniciada, cada servicio
+  hacer clic en una se despliegan sus servicios. Con la sesión iniciada, cada servicio
   lleva a suscribirse a él.
 - **Mi cuenta**: *"Hola, {nombre}"*, cuánto vence en el mes actual y dos
   opciones: **ver las suscripciones** o **crear una nueva**.
@@ -172,10 +172,10 @@ Navegador ──(GET de páginas, POST de formularios + cookie de sesión)──
 
 | Función | Cómo |
 |---|---|
-| Panel de servicios | CSS: se abre con `:hover` / `:focus-within` sobre **Servicios ▾** y queda abierto mientras el cursor esté encima. Es un panel lateral con las categorías en columna; cada una es un `<details>` (todos con el mismo `name`, así queda una abierta por vez): al tocarla se despliegan sus servicios y empujan a las demás hacia abajo, sin JavaScript. |
-| Elegir el servicio desde el formulario | *Elegir desde el catálogo* abre `?catalogo=1`, que dibuja el catálogo en grande y centrado, en modo "elegir", con las categorías en grilla (los servicios aparecen al pasar el cursor, con `:hover` / `:focus-within`) y el servicio actual resaltado. |
+| Panel de servicios | CSS: se abre con `:hover` / `:focus-within` sobre **Servicios ▾** y queda abierto mientras el cursor esté encima. Se despliega justo debajo del botón, con las categorías en columna; cada una es un `<details>` (todos con el mismo `name`, así queda una abierta por vez): al tocarla se despliegan sus servicios y empujan a las demás hacia abajo, sin JavaScript. |
+| Elegir el servicio desde el formulario | *Elegir desde el catálogo* abre `?catalogo=1`, que dibuja el catálogo en grande y centrado, en modo "elegir", con las categorías en grilla (también `<details>`: los servicios se despliegan al hacer clic, encima de la grilla) y el servicio actual resaltado. |
 | Vencimientos por mes | `?mes=AAAA-MM`; el servidor filtra y arma los links al mes anterior y al siguiente. |
-| Buscador | Formulario `GET ?q=`: el servidor filtra por servicio, categoría o cuenta. |
+| Buscador | Formulario `GET ?q=` con un campo con lupa: la lupa es el botón para buscar (también se busca con Enter) y el servidor filtra por servicio, categoría o cuenta. |
 | Calendario | Se arma en Go (`ArmarCalendario`); el cartel de cada día marcado se muestra con CSS al pasar el cursor. |
 | Detalle de una suscripción | `?ver={id}`: el servidor dibuja el recuadro sobre la lista desenfocada; la × y el fondo son links que lo cierran. |
 | Modificar (monto, usuario, contraseña y estado) | `?ver={id}&editar=1` muestra el formulario, con un selector *Activa* / *Pausada*; `POST .../{id}/modificar`. En la lista el estado solo se muestra. |

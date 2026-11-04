@@ -1171,11 +1171,11 @@ a.btn-modificar {
   margin: 0;
 }
 
-/* buscador: campo + botón */
+/* buscador: campo con lupa (+ "Limpiar" si hay una búsqueda) */
 .buscador-form {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
   margin-top: 16px;
 }
@@ -1273,7 +1273,10 @@ a.boton-secundario {
   }
 }
 
-/* ---------- Catálogo: solo las categorías; los servicios al pasar el cursor ---------- */
+/* ---------- Catálogo: solo se ven las categorías ---------- */
+/* al hacer clic en una categoría se despliegan sus servicios. En el TP4 lo
+   hace app.js con la clase "abierta"; en el TP5 cada categoría es un
+   <details> (atributo "open"). Una abierta por vez. */
 .panel-categoria {
   position: relative;
 }
@@ -1284,25 +1287,137 @@ a.boton-secundario {
   border: 1px solid var(--borde);
   border-radius: 10px;
   background: var(--campo);
-  cursor: default;
+  cursor: pointer;
 }
 
 .panel-categoria:hover h3,
-.panel-categoria:focus-within h3 {
+.panel-categoria.abierta h3,
+.panel-categoria[open] h3 {
   background: var(--primario);
   border-color: var(--primario);
   color: var(--crema);
 }
 
 .panel-categoria:hover h3 .icono-categoria,
-.panel-categoria:focus-within h3 .icono-categoria {
+.panel-categoria.abierta h3 .icono-categoria,
+.panel-categoria[open] h3 .icono-categoria {
   background: var(--crema);
   color: var(--primario);
 }
 
-/* los servicios se despliegan encima de lo de abajo, sin mover la grilla */
+/* flechita: ▸ plegada, ▾ desplegada */
+.panel-categoria h3::after {
+  content: "▸";
+  margin-left: auto;
+}
+
+.panel-categoria.abierta h3::after,
+.panel-categoria[open] h3::after {
+  content: "▾";
+}
+
+/* el <summary> (TP5) no muestra su triángulo: la flechita la dibuja el título */
+.panel-categoria summary {
+  display: block;
+  list-style: none;
+}
+
+.panel-categoria summary::-webkit-details-marker {
+  display: none;
+}
+
 .panel-categoria ul {
   display: none;
+}
+
+.panel-categoria.abierta ul,
+.panel-categoria[open] ul {
+  display: block;
+}
+
+/* ---------- Panel desde la barra: debajo del botón "Servicios" ---------- */
+/* las categorías van una debajo de la otra y, al abrir una, sus servicios
+   empujan hacia abajo a las demás */
+.desplegable {
+  position: relative;
+}
+
+/* puente invisible entre el botón y el panel, para no perder el hover */
+.desplegable-boton {
+  position: relative;
+}
+
+.desplegable-boton::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  height: 12px;
+}
+
+.panel-servicios:not(.modo-elegir) {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: auto;
+  bottom: auto;
+  left: 0;
+  width: min(24rem, calc(100vw - 32px));
+  height: auto;
+  max-height: 75vh;
+  padding: 0;
+  overflow-y: auto;
+  border-radius: 16px;
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 16px 40px rgba(0, 47, 68, 0.45);
+  animation: bajar 0.15s ease-out;
+}
+
+.panel-servicios:not(.modo-elegir) .panel-servicios-contenido {
+  min-height: 0;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+.panel-servicios:not(.modo-elegir) .panel-servicios-grilla {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panel-servicios:not(.modo-elegir) .panel-categoria ul {
+  padding: 4px 0 4px 12px;
+}
+
+@keyframes bajar {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- Panel para elegir el servicio de una nueva suscripción ---------- */
+/* grande, del tamaño de su contenido y centrado; las categorías en grilla y,
+   al hacer clic en una, sus servicios se despliegan encima de lo de abajo */
+.panel-servicios.modo-elegir:not([hidden]) {
+  display: flex;
+}
+
+.panel-servicios.modo-elegir .panel-servicios-contenido {
+  width: 100%;
+  max-width: 62rem;
+  min-height: 0;
+  margin: auto;
+}
+
+.panel-servicios.modo-elegir .panel-categoria ul {
   position: absolute;
   top: calc(100% - 4px);
   left: 0;
@@ -1317,110 +1432,53 @@ a.boton-secundario {
   box-shadow: 0 8px 20px rgba(0, 47, 68, 0.3);
 }
 
-.panel-categoria:hover ul,
-.panel-categoria:focus-within ul {
+/* ---------- Buscador con lupa ---------- */
+.buscador {
+  position: relative;
   display: block;
 }
 
-/* puente invisible debajo del botón "Servicios", para no perder el hover al
-   bajar el cursor hasta el panel */
-.desplegable-boton {
-  position: relative;
+.buscador input {
+  padding-left: 38px;
 }
 
-.desplegable-boton::after {
+.buscador::before {
   content: "";
   position: absolute;
-  top: 100%;
-  right: 0;
-  left: 0;
-  height: 40px;
+  top: 50%;
+  left: 12px;
+  width: 18px;
+  height: 18px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234a6672' stroke-width='2.2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='M20 20l-4-4'/></svg>") no-repeat center / contain;
 }
 
-/* ---------- Panel desde la barra: lateral, con las categorías en columna ---------- */
-/* al tocar una categoría se despliegan sus servicios y empujan hacia abajo a
-   las demás */
-.panel-servicios:not(.modo-elegir) {
-  right: auto;
-  width: min(24rem, 100vw);
+/* TP5: como el panel queda dentro de .desplegable (relativo), el de "elegir"
+   se ubica fijo sobre toda la pantalla */
+.panel-servicios.modo-elegir {
+  position: fixed;
+  inset: 0;
+  height: auto;
+  z-index: 30;
+}
+
+/* TP5: la lupa es el botón para buscar (se puede usar también Enter) */
+.buscador-lupa {
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  width: 34px;
+  height: 34px;
   padding: 0;
-  background: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  animation: deslizar 0.18s ease-out;
-}
-
-.panel-servicios:not(.modo-elegir) .panel-servicios-contenido {
-  min-height: 100%;
-  padding: 20px;
-  border-radius: 0 16px 16px 0;
-  box-shadow: 8px 0 30px rgba(0, 47, 68, 0.45);
-}
-
-.panel-servicios:not(.modo-elegir) .panel-servicios-grilla {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.panel-servicios:not(.modo-elegir) .panel-categoria h3 {
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
   cursor: pointer;
 }
 
-/* flechita: ▸ plegada, ▾ desplegada */
-.panel-servicios:not(.modo-elegir) .panel-categoria h3::after {
-  content: "▸";
-  margin-left: auto;
-}
-
-.panel-servicios:not(.modo-elegir) .panel-categoria[open] h3::after {
-  content: "▾";
-}
-
-/* el <summary> no muestra su triángulo: la flechita la dibuja el título */
-.panel-categoria summary {
-  display: block;
-  list-style: none;
-}
-
-.panel-categoria summary::-webkit-details-marker {
-  display: none;
-}
-
-/* los servicios quedan dentro de la columna (no flotan encima) */
-.panel-servicios:not(.modo-elegir) .panel-categoria ul {
-  display: none;
-  position: static;
-  max-height: none;
-  padding: 4px 0 4px 12px;
-  border: 0;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
-}
-
-.panel-servicios:not(.modo-elegir) .panel-categoria[open] ul {
-  display: block;
-}
-
-@keyframes deslizar {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: none;
-  }
-}
-
-/* ---------- Panel para elegir el servicio de una nueva suscripción ---------- */
-/* sigue siendo grande, pero del tamaño de su contenido y centrado */
-.panel-servicios.modo-elegir.abierto {
-  display: flex;
-}
-
-.panel-servicios.modo-elegir .panel-servicios-contenido {
-  width: 100%;
-  max-width: 62rem;
-  min-height: 0;
-  margin: auto;
+.buscador-lupa:hover,
+.buscador-lupa:focus-visible {
+  background: rgba(0, 75, 110, 0.12);
 }
