@@ -97,7 +97,7 @@ function formatearFecha(fechaISO) {
 const formatoPesos = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" });
 
 // cuentan para el gasto las suscripciones activas y los períodos que ya
-// vencieron y se renovaron (se pagaron); no las pausadas ni las canceladas
+// vencieron y se renovaron (se pagaron); no las pausadas
 function cuentaParaElGasto(s) {
   return s.estado === "Activa" || s.estado === "Vencida";
 }
@@ -308,6 +308,10 @@ const ICONOS_CATEGORIA = {
   Música: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
   // computadora con código
   Software: '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M1 20h22"/><path d="M10 8l-2 2 2 2M14 8l2 2-2 2"/>',
+  // casa
+  Hogar: '<path d="M3 11l9-7 9 7"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-6h4v6"/>',
+  // escudo con una tilde
+  Seguros: '<path d="M12 3l8 3v6c0 5-3.4 8.2-8 9-4.6-.8-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
   // pesa de gimnasio
   Deportes: '<path d="M6 6v12M2.5 9v6M18 6v12M21.5 9v6M6 12h12"/>',
   // corazón
@@ -334,7 +338,7 @@ function iconoCategoria(categoria) {
 }
 
 // mismo orden de categorías que el catálogo precargado (logic/servicio.go)
-const ORDEN_CATEGORIAS = ["Streaming", "Música", "Software", "Deportes", "Salud", "Financiero", "Turismo", "Otros"];
+const ORDEN_CATEGORIAS = ["Streaming", "Música", "Software", "Hogar", "Seguros", "Deportes", "Salud", "Financiero", "Turismo", "Otros"];
 
 // agruparPorCategoria devuelve [[categoria, servicios], ...] siguiendo
 // ORDEN_CATEGORIAS; dentro de cada una, los servicios quedan por nombre
@@ -655,26 +659,6 @@ async function paginaSuscripciones(sesion) {
   }
   buscador?.addEventListener("input", mostrarFiltradas);
 
-  // Delegación de eventos: el cambio de estado de cualquier suscripción
-  lista.addEventListener("change", async (evento) => {
-    const select = evento.target.closest(".select-estado");
-    if (!select) return;
-    const sub = suscripciones.find((s) => String(s.id_suscripcion) === select.dataset.id);
-    try {
-      // la contraseña no se envía: la API conserva la que estaba guardada
-      await enviarJSON(`/suscripciones/${sub.id_suscripcion}`, "PUT", {
-        monto: sub.monto,
-        fecha_vencimiento: sub.fecha_vencimiento,
-        usuario_cuenta: sub.usuario_cuenta,
-        estado: select.value,
-      });
-      mostrarMensaje(`Suscripción a ${sub.servicio_nombre}: ${select.value.toLowerCase()}.`);
-    } catch (error) {
-      mostrarError(error);
-    }
-    await cargar();
-  });
-
   // Delegación de eventos: un solo listener en la lista atiende todos los botones
   // el detalle se abre al tocar el item (o con Enter / espacio si tiene el foco)
   // al guardar los cambios se recarga la lista y el detalle muestra los datos actualizados
@@ -689,7 +673,7 @@ async function paginaSuscripciones(sesion) {
       detalle.abrir(sub, esEditable(sub), true);
       return true;
     }
-    if (evento.target.closest(".btn-eliminar, .select-estado")) return false;
+    if (evento.target.closest(".btn-eliminar")) return false;
     const item = evento.target.closest(".item-abrible");
     if (!item) return false;
     const sub = suscripciones.find((s) => String(s.id_suscripcion) === item.dataset.id);
@@ -720,9 +704,9 @@ async function paginaSuscripciones(sesion) {
 }
 
 // itemSuscripcion arma el <li> de una suscripción. En la lista solo se ve el
-// servicio, la categoría y el monto; la cuenta, las fechas y la contraseña
-// están en el detalle que se abre al tocar el item. Si es editable lleva el
-// selector de estado y el botón de eliminar; si no, solo muestra el estado.
+// servicio, la categoría, el monto y el estado; la cuenta, las fechas y la
+// contraseña están en el detalle que se abre al tocar el item. Si es editable
+// lleva los botones de modificar (monto, cuenta y estado) y eliminar.
 function itemSuscripcion(s, editable) {
   // la categoría se muestra solo con el logo (sin la etiqueta de texto)
   const li = crearItem(
@@ -740,11 +724,12 @@ function itemSuscripcion(s, editable) {
   li.tabIndex = 0;
   li.setAttribute("aria-label", `Ver detalles de ${s.servicio_nombre}`);
 
+  const estado = document.createElement("span");
+  estado.className = "estado-fijo";
+  estado.textContent = textoEstado(s.estado);
+
   if (!editable) {
     li.classList.add("item-solo-lectura");
-    const estado = document.createElement("span");
-    estado.className = "estado-fijo";
-    estado.textContent = textoEstado(s.estado);
     li.append(estado);
     return li;
   }
@@ -756,14 +741,8 @@ function itemSuscripcion(s, editable) {
   botonModificar.dataset.id = s.id_suscripcion;
   botonModificar.textContent = "Modificar";
 
-  const select = document.createElement("select");
-  select.className = "select-estado";
-  select.dataset.id = s.id_suscripcion;
-  select.setAttribute("aria-label", `Estado de ${s.servicio_nombre}`);
-  for (const estado of ["Activa", "Pausada", "Cancelada"]) {
-    select.append(new Option(estado, estado, false, estado === s.estado));
-  }
-  li.querySelector(".btn-eliminar").before(botonModificar, select);
+  // el estado (activa o pausada) se cambia desde "Modificar"
+  li.querySelector(".btn-eliminar").before(botonModificar, estado);
   return li;
 }
 
@@ -830,6 +809,7 @@ function prepararDetalle(recargar) {
     formEditar.elements.monto.value = Number(actual.monto);
     formEditar.elements.usuario_cuenta.value = actual.usuario_cuenta ?? "";
     formEditar.elements.password_cuenta.value = "";
+    formEditar.elements.estado.value = actual.estado;
     formEditar.elements.monto.select();
   }
 
@@ -854,7 +834,7 @@ function prepararDetalle(recargar) {
       fecha_vencimiento: actual.fecha_vencimiento,
       // vacío = sin cuenta (la API lo guarda como null)
       usuario_cuenta: formEditar.elements.usuario_cuenta.value,
-      estado: actual.estado,
+      estado: formEditar.elements.estado.value,
     };
     // solo se manda si se escribió una nueva; si no, la API conserva la guardada
     if (nuevaPassword) cuerpo.password_cuenta = nuevaPassword;
@@ -1003,7 +983,7 @@ const paginas = {
 // Versión de las páginas HTML. Si el navegador muestra una copia vieja
 // guardada (sin esta versión), se recarga una sola vez para pedir la nueva:
 // al recargar, el navegador consulta al servidor.
-const VERSION_PAGINAS = "2026-10-29b";
+const VERSION_PAGINAS = "2026-11-04";
 
 function recargarSiEstaDesactualizada() {
   const meta = document.querySelector('meta[name="version-pagina"]');

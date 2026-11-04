@@ -34,8 +34,9 @@ type suscripcionDePrueba struct {
 // ejemplosPorUsuario son las suscripciones que se le cargan a cada usuario de
 // prueba (el primero recibe el primer grupo, el segundo el siguiente, etc.).
 // Muestran las distintas situaciones de la app: varias en el mes, con y sin
-// cuenta, dos cuentas del mismo servicio, una pausada, una cancelada, una del
-// mes anterior (que se renueva sola) y otras del mes siguiente.
+// cuenta, servicios del hogar y seguros, dos cuentas del mismo servicio,
+// algunas pausadas, una del mes anterior (que se renueva sola) y otras del mes
+// siguiente.
 var ejemplosPorUsuario = [][]suscripcionDePrueba{
 	{
 		{servicio: "Netflix", monto: "7999", mes: 0, dia: 5, plazoMeses: 1, usuarioCuenta: "martina.netflix", passwordCuenta: "netflix123"},
@@ -49,15 +50,17 @@ var ejemplosPorUsuario = [][]suscripcionDePrueba{
 		{servicio: "Disney+", monto: "6500", mes: 0, dia: 8, plazoMeses: 1, usuarioCuenta: "agustina.disney", passwordCuenta: "disney123"},
 		{servicio: "YouTube Premium", monto: "3200", mes: 0, dia: 14, plazoMeses: 1, usuarioCuenta: "agustina@ejemplo.com"},
 		{servicio: "Pádel", monto: "18000", mes: 0, dia: 20, plazoMeses: 1},
-		{servicio: "Internet hogar", monto: "25000", mes: 0, dia: 25, plazoMeses: 1, usuarioCuenta: "cliente-48213"},
+		{servicio: "Internet / Wifi", monto: "25000", mes: 0, dia: 25, plazoMeses: 1, usuarioCuenta: "cliente-48213"},
 		{servicio: "Seguro de auto", monto: "42000", mes: 1, dia: 3, plazoMeses: 1, estado: "Pausada"},
-		{servicio: "HBO Max", monto: "5500", mes: 1, dia: 16, plazoMeses: 1, usuarioCuenta: "agustina.hbo", passwordCuenta: "hbo12345", estado: "Cancelada"},
+		{servicio: "HBO Max", monto: "5500", mes: 1, dia: 16, plazoMeses: 1, usuarioCuenta: "agustina.hbo", passwordCuenta: "hbo12345"},
 	},
 	{
 		{servicio: "HBO Max", monto: "5500", mes: 0, dia: 6, plazoMeses: 1, usuarioCuenta: "nicolas.hbo", passwordCuenta: "hbo12345"},
 		{servicio: "Deezer", monto: "3900", mes: 0, dia: 11, plazoMeses: 1, usuarioCuenta: "nicolas@ejemplo.com", passwordCuenta: "deezer123"},
 		{servicio: "ChatGPT Plus", monto: "22000", mes: 0, dia: 19, plazoMeses: 1, usuarioCuenta: "nicolas@ejemplo.com"},
 		{servicio: "Yoga", monto: "15000", mes: 0, dia: 24, plazoMeses: 1},
+		{servicio: "Luz", monto: "18500", mes: 0, dia: 16, plazoMeses: 1, usuarioCuenta: "cliente-30482"},
+		{servicio: "Seguro de hogar", monto: "21000", mes: 0, dia: 27, plazoMeses: 1, estado: "Pausada"},
 		{servicio: "Swiss Medical", monto: "88000", mes: 1, dia: 9, plazoMeses: 1},
 	},
 }

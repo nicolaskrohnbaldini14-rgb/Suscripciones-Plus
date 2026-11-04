@@ -284,7 +284,7 @@ HTTP 400
 body contains "no es válido"
 
 
-# ---------- 11b. Una suscripción nueva no puede crearse pausada ni cancelada (400) ----------
+# ---------- 11b. Una suscripción nueva no puede crearse pausada (400) y no existe el estado Cancelada ----------
 POST {{host}}/suscripciones
 Content-Type: application/json
 {
@@ -308,6 +308,8 @@ Content-Type: application/json
   "estado": "Cancelada"
 }
 HTTP 400
+[Asserts]
+body contains "no es válido"
 
 
 # ---------- 12. JSON invalido (400) ----------
@@ -533,19 +535,32 @@ HTTP 409
 body contains "con la cuenta"
 
 
-# ---------- 23. Cancelar la segunda y reactivar la primera (200) ----------
+# ---------- 23. Pausar la segunda y reactivar la primera (200) ----------
+PUT {{host}}/suscripciones/{{sub2_id}}
+Content-Type: application/json
+{
+  "monto": "800.00",
+  "fecha_vencimiento": "2026-12-31T00:00:00Z",
+  "estado": "Pausada",
+  "usuario_cuenta": "segunda@test.com",
+  "password_cuenta": "clave2"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.estado" == "Pausada"
+
+# ya no se puede cancelar: para dejarla se elimina (400)
 PUT {{host}}/suscripciones/{{sub2_id}}
 Content-Type: application/json
 {
   "monto": "800.00",
   "fecha_vencimiento": "2026-12-31T00:00:00Z",
   "estado": "Cancelada",
-  "usuario_cuenta": "segunda@test.com",
-  "password_cuenta": "clave2"
+  "usuario_cuenta": "segunda@test.com"
 }
-HTTP 200
+HTTP 400
 [Asserts]
-jsonpath "$.estado" == "Cancelada"
+body contains "no es válido"
 
 PUT {{host}}/suscripciones/{{sub_id}}
 Content-Type: application/json
@@ -669,7 +684,7 @@ Content-Type: application/json
 {
   "monto": "1.00",
   "fecha_vencimiento": "2027-06-30T00:00:00Z",
-  "estado": "Cancelada",
+  "estado": "Pausada",
   "usuario_cuenta": "x@test.com",
   "password_cuenta": "x"
 }

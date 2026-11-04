@@ -16,6 +16,14 @@ jsonpath "$[?(@.nombre=='iTunes')].categoria" nth 0 == "Música"
 jsonpath "$[?(@.nombre=='Gimnasio')].categoria" nth 0 == "Deportes"
 jsonpath "$[?(@.nombre=='Pádel')].categoria" nth 0 == "Deportes"
 jsonpath "$[?(@.nombre=='OSDE')].categoria" nth 0 == "Salud"
+# servicios del hogar y seguros
+jsonpath "$[?(@.nombre=='Internet / Wifi')].categoria" nth 0 == "Hogar"
+jsonpath "$[?(@.nombre=='Luz')].categoria" nth 0 == "Hogar"
+jsonpath "$[?(@.nombre=='Gas')].categoria" nth 0 == "Hogar"
+jsonpath "$[?(@.nombre=='Seguro de auto')].categoria" nth 0 == "Seguros"
+jsonpath "$[?(@.nombre=='Seguro de hogar')].categoria" nth 0 == "Seguros"
+jsonpath "$[?(@.categoria=='Hogar')]" count == 7
+jsonpath "$[?(@.categoria=='Seguros')]" count == 6
 # la categoría "Gimnasio" pasó a llamarse "Deportes"
 jsonpath "$[?(@.categoria=='Gimnasio')]" count == 0
 jsonpath "$[?(@.categoria=='Deportes')]" count >= 8

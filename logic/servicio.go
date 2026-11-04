@@ -13,7 +13,7 @@ import (
 )
 
 // Categorías del catálogo, en el orden en que se cargan
-var Categorias = []string{"Streaming", "Música", "Software", "Deportes", "Salud", "Financiero", "Turismo", "Otros"}
+var Categorias = []string{"Streaming", "Música", "Software", "Hogar", "Seguros", "Deportes", "Salud", "Financiero", "Turismo", "Otros"}
 
 // CatalogoInicial son los servicios que se precargan al iniciar la aplicación.
 // Los usuarios eligen de este catálogo al crear una suscripción; no se pueden
@@ -22,11 +22,13 @@ var CatalogoInicial = map[string][]string{
 	"Streaming":  {"Netflix", "HBO Max", "Disney+", "Prime Video", "Paramount+", "Star+", "YouTube Premium"},
 	"Música":     {"Spotify", "iTunes", "YouTube Music", "Deezer", "Tidal"},
 	"Software":   {"Microsoft 365", "Google One", "iCloud+", "Adobe Creative Cloud", "ChatGPT Plus", "Canva Pro", "Dropbox"},
+	"Hogar":      {"Internet / Wifi", "Luz", "Gas", "Agua", "Cable / TV", "Telefonía fija", "Expensas"},
+	"Seguros":    {"Seguro de auto", "Seguro de moto", "Seguro de hogar", "Seguro de vida", "Seguro de celular", "Seguro de viaje"},
 	"Deportes":   {"Gimnasio", "Pádel", "Fútbol", "Tenis", "Natación", "Yoga", "Crossfit", "Club deportivo"},
 	"Salud":      {"OSDE", "Swiss Medical", "Galeno", "Medifé", "Sancor Salud", "Omint"},
-	"Financiero": {"Seguro de auto", "Seguro de hogar", "Seguro de vida", "Mantenimiento de cuenta bancaria", "Cuota de préstamo"},
+	"Financiero": {"Mantenimiento de cuenta bancaria", "Cuota de préstamo", "Tarjeta de crédito"},
 	"Turismo":    {"Aerolíneas Plus", "Despegar", "Booking.com", "Airbnb"},
-	"Otros":      {"Internet hogar", "Telefonía celular", "Mercado Libre Meli+", "Rappi Pro", "PedidosYa Plus"},
+	"Otros":      {"Telefonía celular", "Mercado Libre Meli+", "Rappi Pro", "PedidosYa Plus"},
 }
 
 type ServicioServicio struct {

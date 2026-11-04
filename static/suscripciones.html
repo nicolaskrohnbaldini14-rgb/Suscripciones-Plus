@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- si cambia, app.js recarga las copias viejas que tenga guardadas el navegador -->
-  <meta name="version-pagina" content="2026-10-29b">
+  <meta name="version-pagina" content="2026-11-04">
   <title>Mis suscripciones · Suscripciones+</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -91,6 +91,12 @@
         </label>
         <label>Nueva contraseña de la cuenta
           <input type="password" name="password_cuenta" autocomplete="new-password" placeholder="Dejala vacía para no cambiarla">
+        </label>
+        <label>Estado
+          <select name="estado">
+            <option value="Activa">Activa</option>
+            <option value="Pausada">Pausada</option>
+          </select>
         </label>
         <p id="editar-error" class="detalle-error" role="alert" hidden></p>
         <div class="acciones-confirmar">

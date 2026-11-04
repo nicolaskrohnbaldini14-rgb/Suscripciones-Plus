@@ -35,8 +35,8 @@ make run-app
 
 Al iniciar, la aplicación precarga el catálogo de servicios (ver
 [Catálogo de servicios](#catálogo-de-servicios)). Para probarla: registrarse,
-crear suscripciones eligiendo un servicio del catálogo y cambiarles el estado
-desde la lista.
+crear suscripciones eligiendo un servicio del catálogo y pausarlas o
+reactivarlas desde *Modificar*.
 
 ## Variables de entorno (`.env`)
 
@@ -73,8 +73,9 @@ ejemplo:
 Las suscripciones se arman a partir del mes actual, así que siempre hay
 vencimientos en el mes que se está viendo. Entre las de los tres usuarios hay
 suscripciones con y sin cuenta del servicio, dos cuentas distintas de Netflix
-(Martina), una del mes anterior que se renueva sola al iniciar (OSDE de Martina), una
-pausada, una cancelada y otras que vencen el mes siguiente.
+(Martina), una del mes anterior que se renueva sola al iniciar (OSDE de Martina),
+servicios del hogar (Internet, luz) y seguros, algunas pausadas y otras que
+vencen el mes siguiente.
 
 Se definen en el `.env` como `USUARIO_PRUEBA_1`, `USUARIO_PRUEBA_2`, ... con
 el formato `nombre|email|contraseña`; se pueden agregar más o desactivarlos
@@ -173,9 +174,9 @@ Funcionamiento de `app.js`:
 - **Calendario:** al costado de la lista se dibuja la grilla del mes (de lunes
   a domingo, con el día de hoy recuadrado). Los días con vencimientos tienen un
   pin y, al pasar el cursor o enfocarlos con el teclado, muestran un cartel con
-  los servicios que vencen ese día, su monto y si están pausados o cancelados.
+  los servicios que vencen ese día, su monto y si están pausados.
 - **Detalle de una suscripción:** en la lista solo se ve el servicio, su
-  categoría y el monto. Al tocar una suscripción se abre un `<dialog>` (con el
+  categoría, el monto y el estado. Al tocar una suscripción se abre un `<dialog>` (con el
   fondo desenfocado y efecto de zoom) con la cuenta, la fecha de inicio, el
   vencimiento y el estado. La contraseña de la cuenta aparece oculta: para
   verla hay que confirmar la contraseña del usuario de Suscripciones+
@@ -184,18 +185,16 @@ Funcionamiento de `app.js`:
 - **Buscador:** filtra las suscripciones del mes que se está viendo por
   servicio, categoría o usuario de la cuenta, a medida que se escribe.
 - **Solo lectura:** en los meses anteriores al actual, y en los períodos que
-  ya se renovaron (*Vencida (renovada)*), no aparecen el selector de estado ni
-  el botón de eliminar, ni se puede modificar el monto. La API también lo
+  ya se renovaron (*Vencida (renovada)*), no aparecen los botones de
+  modificar ni de eliminar. La API también lo
   controla (`403`).
 - **Modificar una suscripción:** cada suscripción editable tiene el botón
   *Modificar* en la lista (también está dentro del detalle), que abre un
   formulario con el monto, el usuario y la contraseña de la cuenta del
-  servicio. Si la contraseña se deja vacía se conserva la guardada; si se
-  borra el usuario, queda "Sin cuenta". Hace un `PUT` y refresca la lista y
-  el total.
-- **Cambio de estado:** cada suscripción de la lista tiene un selector
-  (*Activa / Pausada / Cancelada*). Con delegación de eventos, un listener de
-  `change` sobre la lista hace el `PUT` y refresca la vista.
+  servicio y el **estado** (*Activa* o *Pausada*). Si la contraseña se deja
+  vacía se conserva la guardada; si se borra el usuario, queda "Sin cuenta".
+  Hace un `PUT` y refresca la lista y el total (las pausadas no suman). No
+  existe el estado *Cancelada*: para dejar una suscripción se la elimina.
 - **Borrado con delegación de eventos:** como los botones se crean
   dinámicamente, hay un único listener de `click` sobre cada lista que detecta
   el botón presionado, toma el ID desde `data-id` y hace el `DELETE`. Tras un
@@ -223,7 +222,7 @@ El modelo de datos está compuesto por 4 tablas relacionales, definidas en
 |---|---|
 | `usuario` | Cuenta de la persona que usa la app (nombre, email y contraseña hasheada con bcrypt). |
 | `servicio` | Catálogo de servicios disponibles (nombre + categoría), normalizado para poder agrupar el gasto por categoría. Se precarga al iniciar la app. |
-| `suscripcion` | Relaciona un `usuario` con un `servicio`: monto, fecha de inicio, fecha de vencimiento, credenciales de acceso al servicio (usuario/contraseña de esa cuenta, **opcionales**: pueden ser `NULL`) y estado (activa/pausada/cancelada). |
+| `suscripcion` | Relaciona un `usuario` con un `servicio`: monto, fecha de inicio, fecha de vencimiento, credenciales de acceso al servicio (usuario/contraseña de esa cuenta, **opcionales**: pueden ser `NULL`) y estado (activa o pausada). |
 | `pago` | Historial real de cobros de una suscripción. Permite calcular el gasto efectivo mes a mes, no solo el proyectado. |
 
 **Relaciones:**
@@ -318,11 +317,13 @@ existan. Se puede ejecutar en cada arranque sin duplicar nada.
 | Streaming | Netflix, HBO Max, Disney+, Prime Video, Paramount+, Star+, YouTube Premium |
 | Música | Spotify, iTunes, YouTube Music, Deezer, Tidal |
 | Software | Microsoft 365, Google One, iCloud+, Adobe Creative Cloud, ChatGPT Plus, Canva Pro, Dropbox |
+| Hogar | Internet / Wifi, Luz, Gas, Agua, Cable / TV, Telefonía fija, Expensas |
+| Seguros | Seguro de auto, Seguro de moto, Seguro de hogar, Seguro de vida, Seguro de celular, Seguro de viaje |
 | Deportes | Gimnasio, Pádel, Fútbol, Tenis, Natación, Yoga, Crossfit, Club deportivo |
 | Salud | OSDE, Swiss Medical, Galeno, Medifé, Sancor Salud, Omint |
-| Financiero | Seguro de auto, Seguro de hogar, Seguro de vida, Mantenimiento de cuenta bancaria, Cuota de préstamo |
+| Financiero | Mantenimiento de cuenta bancaria, Cuota de préstamo, Tarjeta de crédito |
 | Turismo | Aerolíneas Plus, Despegar, Booking.com, Airbnb |
-| Otros | Internet hogar, Telefonía celular, Mercado Libre Meli+, Rappi Pro, PedidosYa Plus |
+| Otros | Telefonía celular, Mercado Libre Meli+, Rappi Pro, PedidosYa Plus |
 
 La categoría que antes era *Gimnasio* ahora es **Deportes**, para poder
 registrar gimnasio, pádel, fútbol, etc.
@@ -377,12 +378,12 @@ registrar gimnasio, pádel, fútbol, etc.
 
 - **Usuarios:** nombre, email y password son obligatorios. El email tiene que tener un formato válido y no puede repetirse. La password se guarda hasheada y nunca se devuelve en las respuestas.
 - **Acceso:** cada usuario ve y modifica únicamente sus propias suscripciones y pagos.
-- **Servicios:** el catálogo viene precargado y es de solo lectura. Las categorías son `Streaming`, `Música`, `Software`, `Deportes`, `Salud`, `Financiero`, `Turismo` y `Otros`.
+- **Servicios:** el catálogo viene precargado y es de solo lectura. Las categorías son `Streaming`, `Música`, `Software`, `Hogar`, `Seguros`, `Deportes`, `Salud`, `Financiero`, `Turismo` y `Otros`.
 - **Suscripciones:**
   - El usuario y el servicio tienen que existir.
   - El monto tiene que ser mayor a cero y la fecha de inicio anterior a la de vencimiento.
-  - Se crean siempre en estado `Activa`; después se pueden pasar a `Pausada` o `Cancelada` (y reactivar).
-  - **Renovación automática:** cuando una suscripción activa vence, se renueva sola por el mismo plazo con el que se registró (si era de un mes, por otro mes; si era de un año, por otro año). El período vencido queda como historial con estado `Vencida` y se crea uno nuevo con el mismo monto y la misma cuenta. Se hace al iniciar la app y cada vez que se piden las suscripciones de un usuario (`RenovarVencidas` en `logic/renovacion.go`), con una sola sentencia SQL atómica (`RenovarSuscripcion`). Las pausadas y canceladas no se renuevan.
+  - Se crean siempre en estado `Activa`; después se pueden pausar y reactivar (`Activa` y `Pausada` son los únicos estados que se pueden elegir). No hay estado `Cancelada`: para dejar una suscripción se la elimina.
+  - **Renovación automática:** cuando una suscripción activa vence, se renueva sola por el mismo plazo con el que se registró (si era de un mes, por otro mes; si era de un año, por otro año). El período vencido queda como historial con estado `Vencida` y se crea uno nuevo con el mismo monto y la misma cuenta. Se hace al iniciar la app y cada vez que se piden las suscripciones de un usuario (`RenovarVencidas` en `logic/renovacion.go`), con una sola sentencia SQL atómica (`RenovarSuscripcion`). Las pausadas no se renuevan.
   - Las suscripciones `Vencida` y las que vencen en un mes anterior al actual son de **solo lectura**.
   - Usuario y contraseña de la cuenta del servicio son opcionales.
   - Un usuario puede tener **varias suscripciones al mismo servicio** si son cuentas distintas: desde la segunda (mientras la otra siga activa o pausada) hay que indicar el usuario de la cuenta, y no se puede repetir uno que ya esté en uso (sin distinguir mayúsculas).
@@ -400,7 +401,7 @@ de las acciones protegidas.
 | `frontend.hurl` | Que se sirvan las páginas, que el inicio tenga los links a login y registro y el menú de servicios en la barra, y que no tenga el alta de servicios. |
 | `usuario.hurl` | Registro, login correcto e incorrecto, `GET /sesion`, CRUD de la propia cuenta, `403` sobre cuentas ajenas y cierre de sesión. |
 | `servicio.hurl` | Catálogo precargado (servicios y categorías, incluida Deportes) y `405` al intentar crear, modificar o borrar servicios. |
-| `suscripcion.hurl` | CRUD de suscripciones, varias suscripciones al mismo servicio con cuentas distintas, alta sin credenciales, `400` al crearlas pausadas o canceladas, renovación automática con el mismo plazo, `403` al modificar períodos vencidos, `404` sobre suscripciones ajenas y `401` sin sesión. |
+| `suscripcion.hurl` | CRUD de suscripciones, varias suscripciones al mismo servicio con cuentas distintas, alta sin credenciales, `400` al crearlas pausadas o con el estado `Cancelada` (ya no existe), pausar y reactivar, renovación automática con el mismo plazo, `403` al modificar períodos vencidos, `404` sobre suscripciones ajenas y `401` sin sesión. |
 | `pago.hurl` | Pagos sobre suscripciones propias, `404` sobre pagos ajenos y `401` sin sesión. |
 | `datos_de_prueba.hurl` | Que los usuarios de prueba del `.env` puedan entrar y tengan sus suscripciones de ejemplo (incluida la renovación automática). |
 

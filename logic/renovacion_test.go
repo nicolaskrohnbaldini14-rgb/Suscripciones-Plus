@@ -43,7 +43,7 @@ func TestEsSoloLectura(t *testing.T) {
 	}{
 		{"vence este mes", sqlc.Suscripcion{Estado: "Activa", FechaVencimiento: fecha(2026, 10, 5)}, false},
 		{"vence el mes que viene", sqlc.Suscripcion{Estado: "Pausada", FechaVencimiento: fecha(2026, 11, 20)}, false},
-		{"venció el mes pasado", sqlc.Suscripcion{Estado: "Cancelada", FechaVencimiento: fecha(2026, 9, 30)}, true},
+		{"venció el mes pasado", sqlc.Suscripcion{Estado: "Pausada", FechaVencimiento: fecha(2026, 9, 30)}, true},
 		{"período renovado (Vencida)", sqlc.Suscripcion{Estado: EstadoVencida, FechaVencimiento: fecha(2026, 10, 15)}, true},
 	}
 	for _, c := range casos {
