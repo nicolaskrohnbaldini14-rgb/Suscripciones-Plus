@@ -38,6 +38,37 @@ Al iniciar, la aplicación precarga el catálogo de servicios (ver
 crear suscripciones eligiendo un servicio del catálogo y cambiarles el estado
 desde la lista.
 
+## Variables de entorno (`.env`)
+
+Las credenciales de la base no están escritas en el código: se leen de un
+archivo `.env` que **no se sube al repositorio** (está en `.gitignore`). En el
+repo está [`.env.example`](.env.example) con valores de ejemplo para
+desarrollo; `make run-app` (y `make`) lo copian como `.env` si todavía no
+existe. Para usar otros valores:
+
+```bash
+cp .env.example .env
+```
+
+y editar `.env`. Lo usan:
+
+- `docker-compose.yml` (`env_file: .env`): usuario, contraseña y nombre de la
+  base del contenedor, y el puerto publicado (`POSTGRES_PORT`).
+- La aplicación y los tests de Go (`cadenaConexion()` en `main.go`): cargan el
+  `.env` con [godotenv](https://github.com/joho/godotenv) y arman la URL de
+  conexión. Si una variable ya está definida en el sistema, tiene prioridad.
+
+## Esperas
+
+- **Base de datos:** `docker compose up --wait` espera el healthcheck
+  (`pg_isready`), que se reintenta durante unos 2 minutos. Además, la
+  aplicación reintenta conectarse cada un segundo durante 60 segundos antes de
+  rendirse, por si la base tarda en aceptar conexiones.
+- **Aplicación (pruebas):** antes de correr Hurl, el makefile consulta la app
+  cada un segundo hasta que responda, con un máximo de `ESPERA_APP` segundos
+  (60 por defecto). Si la app se cae o no responde a tiempo, lo informa y borra
+  los contenedores.
+
 ## Ejecutar pruebas (tests de sqlc + pruebas Hurl de la API)
 ```bash
 make
@@ -378,7 +409,9 @@ de las acciones protegidas.
 │   ├── servicio.hurl
 │   ├── suscripcion.hurl
 │   └── usuario.hurl
-├── docker-compose.yml    # PostgreSQL con healthcheck
+├── docker-compose.yml    # PostgreSQL con healthcheck (credenciales del .env)
+├── .env.example          # Variables de entorno de ejemplo (el .env no se versiona)
+├── .gitignore
 ├── sqlc.yaml
 └── makefile
 ```

@@ -1,2 +1,15 @@
+# ejecutables y archivos temporales
 tmp/
+*.exe
+*.log
+
+# código generado (se regenera con make)
 db/sqlc/
+
+# variables de entorno con credenciales (se sube solo .env.example)
+.env
+
+# archivos del sistema y de los editores
+.DS_Store
+.vscode/
+.idea/

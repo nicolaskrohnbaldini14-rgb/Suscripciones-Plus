@@ -3,18 +3,26 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
+	"net/url"
+	"os"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib" // driver de PostgreSQL
+	"github.com/joho/godotenv"
 
 	"tp2-krohn-trapani-cicopiedi/db/sqlc"
 	"tp2-krohn-trapani-cicopiedi/logic"
 )
 
 func main() {
-	// 1. Conexión a PostgreSQL (Docker)
-	connStr := "postgres://postgres:postgres@localhost:5432/mi_tp2_db?sslmode=disable"
+	// 1. Conexión a PostgreSQL (Docker). Las credenciales salen del .env
+	connStr, err := cadenaConexion()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	dbConn, err := sql.Open("pgx", connStr)
 	if err != nil {
@@ -22,7 +30,7 @@ func main() {
 	}
 	defer dbConn.Close()
 
-	if err := dbConn.Ping(); err != nil {
+	if err := esperarBaseDeDatos(dbConn, esperaBaseDeDatos); err != nil {
 		log.Fatalf("No se pudo conectar a PostgreSQL: %v", err)
 	}
 	log.Println("Conexión exitosa a PostgreSQL")
@@ -93,5 +101,52 @@ func main() {
 	log.Println("Servidor escuchando en http://localhost:8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatalf("Error al iniciar el servidor HTTP: %v", err)
+	}
+}
+
+// esperaBaseDeDatos es cuánto se reintenta conectar antes de rendirse: si la
+// base tarda en arrancar, la aplicación espera en lugar de fallar enseguida
+const esperaBaseDeDatos = 60 * time.Second
+
+// cadenaConexion arma la URL de PostgreSQL con las variables de entorno. Si
+// existe un archivo .env, primero lo carga (las variables ya definidas en el
+// sistema tienen prioridad). Así las credenciales no quedan escritas en el
+// código.
+func cadenaConexion() (string, error) {
+	_ = godotenv.Load() // si no hay .env se usan las variables del sistema
+
+	valores := map[string]string{}
+	for _, nombre := range []string{"POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_DB", "POSTGRES_HOST", "POSTGRES_PORT"} {
+		valor := os.Getenv(nombre)
+		if valor == "" {
+			return "", fmt.Errorf("falta la variable de entorno %s: copiá .env.example como .env", nombre)
+		}
+		valores[nombre] = valor
+	}
+
+	u := url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword(valores["POSTGRES_USER"], valores["POSTGRES_PASSWORD"]),
+		Host:     valores["POSTGRES_HOST"] + ":" + valores["POSTGRES_PORT"],
+		Path:     valores["POSTGRES_DB"],
+		RawQuery: "sslmode=disable",
+	}
+	return u.String(), nil
+}
+
+// esperarBaseDeDatos reintenta el Ping cada un segundo hasta que la base
+// responda o se cumpla el tiempo máximo
+func esperarBaseDeDatos(db *sql.DB, maximo time.Duration) error {
+	limite := time.Now().Add(maximo)
+	for {
+		err := db.Ping()
+		if err == nil {
+			return nil
+		}
+		if time.Now().After(limite) {
+			return fmt.Errorf("la base no respondió en %s: %w", maximo, err)
+		}
+		log.Printf("Esperando a PostgreSQL... (%v)", err)
+		time.Sleep(time.Second)
 	}
 }

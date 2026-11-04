@@ -1,13 +1,20 @@
 APP_NAME := Tp4-Krohn-Trapani-Cicopiedi
 HOST := http://localhost:8080
 HURL_FILES := hurl/frontend.hurl hurl/usuario.hurl hurl/servicio.hurl hurl/suscripcion.hurl hurl/pago.hurl
+# segundos máximos que se espera a que la aplicación responda
+ESPERA_APP := 60
 
 .PHONY: all run run-app clean-docker docker-up generate build test test-api docker-down clean
 
 
 all: test-api
 
-clean-docker:
+# si no existe el .env (credenciales), se crea a partir de .env.example
+.env:
+	@echo "==> Creando .env a partir de .env.example..."
+	@cp .env.example .env
+
+clean-docker: .env
 	@echo "==> Limpiando contenedores y volúmenes previos..."
 	@-docker compose down -v 2>/dev/null || true
 
@@ -35,7 +42,17 @@ test-api: build
 	@$(MAKE) --no-print-directory test || { $(MAKE) --no-print-directory docker-down; exit 1; }
 	@echo "==> Levantando la aplicación..."
 	@./tmp/$(APP_NAME) & APP_PID=$$! ; \
-	curl -s -o /dev/null --retry 10 --retry-connrefused --retry-delay 1 $(HOST)/usuarios ; \
+	echo "==> Esperando a que la aplicación responda (hasta $(ESPERA_APP) s)..." ; \
+	ESPERA=0 ; \
+	until curl -s -o /dev/null $(HOST)/servicios ; do \
+		if ! kill -0 $$APP_PID 2>/dev/null ; then \
+			echo "La aplicación terminó antes de responder" ; $(MAKE) --no-print-directory docker-down ; exit 1 ; \
+		fi ; \
+		if [ $$ESPERA -ge $(ESPERA_APP) ] ; then \
+			echo "La aplicación no respondió en $(ESPERA_APP) s" ; kill $$APP_PID ; $(MAKE) --no-print-directory docker-down ; exit 1 ; \
+		fi ; \
+		ESPERA=$$((ESPERA + 1)) ; sleep 1 ; \
+	done ; \
 	echo "==> Probando los endpoints con Hurl..." ; \
 	hurl --test --jobs 1 --variable host=$(HOST) $(HURL_FILES) ; \
 	STATUS=$$? ; \
