@@ -27,10 +27,10 @@ Aplicación web en Go para registrar suscripciones y gastos recurrentes
 # Ejecución
 
 ```bash
-git clone https://github.com/nicolaskrohnbaldini14-rgb/Tp1-Krohn-Trapani-Cicopiedi.git
+git clone https://github.com/nicolaskrohnbaldini14-rgb/Suscripciones-Plus.git
 ```
 ```bash
-cd Tp1-Krohn-Trapani-Cicopiedi
+cd Suscripciones-Plus
 ```
 ```bash
 git checkout tp5
