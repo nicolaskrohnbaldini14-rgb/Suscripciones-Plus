@@ -45,6 +45,52 @@ function mostrarError(error) {
   mostrarMensaje(error.message, "error");
 }
 
+// confirmarEnAviso hace una pregunta en el mismo aviso negro de los mensajes
+// (en vez de la ventana del navegador), con "Cancelar" y el botón para
+// confirmar. Devuelve una promesa: true si se confirma, false si se cancela
+// (también con Escape).
+function confirmarEnAviso(texto, textoConfirmar) {
+  clearTimeout(temporizadorMensaje);
+  return new Promise((resolver) => {
+    const pregunta = document.createElement("span");
+    pregunta.textContent = texto;
+
+    const cancelar = document.createElement("button");
+    cancelar.type = "button";
+    cancelar.className = "boton-secundario boton-chico";
+    cancelar.textContent = "Cancelar";
+
+    const confirmar = document.createElement("button");
+    confirmar.type = "button";
+    confirmar.className = "btn-confirmar-aviso boton-chico";
+    confirmar.textContent = textoConfirmar;
+
+    const acciones = document.createElement("span");
+    acciones.className = "mensaje-acciones";
+    acciones.append(cancelar, confirmar);
+
+    cajaMensaje.replaceChildren(pregunta, acciones);
+    cajaMensaje.className = "mensaje error mensaje-confirmar";
+    cajaMensaje.setAttribute("role", "alertdialog");
+    cajaMensaje.hidden = false;
+
+    function terminar(respuesta) {
+      document.removeEventListener("keydown", conEscape);
+      cajaMensaje.hidden = true;
+      cajaMensaje.replaceChildren();
+      cajaMensaje.setAttribute("role", "status");
+      resolver(respuesta);
+    }
+    function conEscape(evento) {
+      if (evento.key === "Escape") terminar(false);
+    }
+    cancelar.addEventListener("click", () => terminar(false));
+    confirmar.addEventListener("click", () => terminar(true));
+    document.addEventListener("keydown", conEscape);
+    cancelar.focus();
+  });
+}
+
 // crearItem arma un <li> con un título, un detalle y (opcional) el botón de eliminar.
 // Se usa textContent (y no innerHTML) para no inyectar HTML con datos del usuario.
 function crearItem(titulo, detalle, id, etiqueta) {
@@ -670,10 +716,7 @@ function pintarActivas(todas) {
     return;
   }
 
-  const suma = activas.reduce((acumulado, s) => acumulado + Number(s.monto), 0);
-  total.textContent =
-    `${activas.length === 1 ? "1 suscripción" : `${activas.length} suscripciones`} · ` +
-    `${formatoPesos.format(suma)} por mes`;
+  total.textContent = activas.length === 1 ? "1 suscripción" : `${activas.length} suscripciones`;
 
   lista.replaceChildren(
     ...activas.map((s) => {
@@ -799,7 +842,8 @@ async function paginaSuscripciones(sesion) {
     // se pide confirmación antes de borrar: no se puede deshacer
     const sub = suscripciones.find((s) => String(s.id_suscripcion) === boton.dataset.id);
     const nombre = sub ? `la suscripción a ${sub.servicio_nombre}` : "esta suscripción";
-    if (!confirm(`¿Seguro que querés eliminar ${nombre}? No se puede deshacer.`)) return;
+    const seguro = await confirmarEnAviso(`¿Seguro que querés eliminar ${nombre}? No se puede deshacer.`, "Sí, eliminar");
+    if (!seguro) return;
     try {
       await pedir(`/suscripciones/${boton.dataset.id}`, { method: "DELETE" });
       mostrarMensaje("Suscripción eliminada.");
@@ -1092,7 +1136,7 @@ const paginas = {
 // Versión de las páginas HTML. Si el navegador muestra una copia vieja
 // guardada (sin esta versión), se recarga una sola vez para pedir la nueva:
 // al recargar, el navegador consulta al servidor.
-const VERSION_PAGINAS = "2026-11-05";
+const VERSION_PAGINAS = "2026-11-05c";
 
 function recargarSiEstaDesactualizada() {
   const meta = document.querySelector('meta[name="version-pagina"]');

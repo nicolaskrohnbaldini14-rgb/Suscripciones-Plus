@@ -1290,3 +1290,45 @@ button:hover {
   margin-left: auto;
   flex-shrink: 0;
 }
+
+/* ---------- Confirmación en el aviso negro (antes de eliminar) ---------- */
+/* queda fija arriba de la pantalla, así se ve aunque se esté abajo en la lista */
+.mensaje.mensaje-confirmar {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  width: min(42rem, calc(100% - 32px));
+  margin: 0;
+  transform: translateX(-50%);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.mensaje-acciones {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.mensaje-confirmar .boton-secundario {
+  border-color: #fff;
+  color: #fff;
+  text-decoration: none;
+}
+
+.mensaje-confirmar .boton-secundario:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-confirmar-aviso {
+  background: var(--peligro);
+  color: #fff;
+}
+
+.btn-confirmar-aviso:hover {
+  background: #7a2020;
+}

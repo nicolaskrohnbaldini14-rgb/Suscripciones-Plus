@@ -149,7 +149,7 @@ La aplicación está separada en páginas según quién la usa:
 | `index.html` (`/`) | Todos | Portada centrada con el título, el lema y los botones **Iniciar sesión** y **Registrarse**, sobre el fondo azul. |
 | `login.html` | Todos | Inicio de sesión. |
 | `registro.html` | Todos | Registro de usuarios. |
-| `cuenta.html` | Con sesión | *"Hola, {nombre}"*, resumen de lo que vence este mes, dos opciones (ver las suscripciones o crear una nueva) y, debajo, un panel con **todas las suscripciones activas** (de cualquier mes), ordenadas por vencimiento, con cuánto suman por mes y un link al mes en que vence cada una. |
+| `cuenta.html` | Con sesión | *"Hola, {nombre}"*, resumen de lo que vence este mes, dos opciones (ver las suscripciones o crear una nueva) y, debajo, un panel con **todas las suscripciones activas** (de cualquier mes), ordenadas por vencimiento, con cuántas son y un link al mes en que vence cada una. |
 | `suscripciones.html` | Con sesión | Suscripciones que **vencen en el mes** (por defecto el actual) con el gasto del mes, un **buscador**, el botón *Modificar* (monto, cuenta y estado: activa o pausada) y el botón para eliminar. Abajo, links al mes anterior y al siguiente (`?mes=AAAA-MM`); al costado, un calendario del mes con los días de vencimiento marcados. Los **meses anteriores son solo de lectura**. |
 | `nueva-suscripcion.html` | Con sesión | Formulario de alta: servicio del catálogo (agrupado por categoría; con `?servicio={id}` viene preseleccionado), monto y fechas; usuario y contraseña de la cuenta son opcionales (salvo para diferenciar una segunda suscripción al mismo servicio). La suscripción se crea siempre **Activa**. |
 
@@ -247,7 +247,9 @@ Funcionamiento de `app.js`:
   dinámicamente, hay un único listener de `click` sobre cada lista que detecta
   el botón presionado, toma el ID desde `data-id` y, **después de pedir
   confirmación** (*"¿Seguro que querés eliminar la suscripción a …?"*), hace
-  el `DELETE`. Si se cancela no se borra nada. Tras un borrado exitoso se
+  el `DELETE`. La pregunta aparece en el mismo aviso negro de los mensajes,
+  fijo arriba de la pantalla, con *Cancelar* y *Sí, eliminar* (también se
+  cancela con Escape), en vez de la ventana del navegador. Si se cancela no se borra nada. Tras un borrado exitoso se
   refresca la lista.
 - **Errores:** los mensajes de la API (email repetido, servicio con
   suscripciones, fechas inválidas, etc.) se muestran en un aviso arriba de la
