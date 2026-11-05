@@ -1,7 +1,6 @@
 package views
 
 import (
-	"fmt"
 	"strconv"
 
 	"tp2-krohn-trapani-cicopiedi/db/sqlc"
@@ -29,25 +28,39 @@ templ contenidoNuevaSuscripcion(servicios []sqlc.Servicio, form FormSuscripcion)
 	<p><a href="/cuenta/suscripciones">← Volver a mis suscripciones</a></p>
 }
 
+// IDFormularioSuscripcion es el id del formulario de nueva suscripción: los
+// botones del catálogo lo usan para elegir el servicio sin perder lo escrito
+const IDFormularioSuscripcion = "form-suscripcion"
+
 // SuscripcionForm crea una suscripción para el usuario que inició sesión
 // (el usuario sale de la sesión y el estado inicial es siempre Activa)
 templ SuscripcionForm(servicios []sqlc.Servicio, form FormSuscripcion) {
 	if len(servicios) == 0 {
 		<p class="vacio">Todavía no hay servicios disponibles.</p>
 	} else {
-		<form method="post" action="/cuenta/suscripciones" class="formulario formulario-grilla">
+		<form id={ IDFormularioSuscripcion } method="post" action="/cuenta/suscripciones" class="formulario formulario-grilla">
+			// botón por defecto (invisible): Enter en un campo crea la suscripción,
+			// no abre el catálogo, que es el primer botón del formulario
+			<button type="submit" class="boton-por-defecto" tabindex="-1" aria-hidden="true">Crear suscripción</button>
 			<label>
 				Servicio
-				<select name="id_servicio" required>
-					for _, grupo := range AgruparPorCategoria(servicios) {
-						<optgroup label={ grupo.Categoria }>
-							for _, s := range grupo.Servicios {
-								<option value={ strconv.Itoa(int(s.IDServicio)) } selected?={ s.IDServicio == form.IDServicio }>{ s.Nombre }</option>
-							}
-						</optgroup>
+				// el servicio elegido viaja oculto; el botón abre el catálogo grande
+				// (envía el formulario por POST, así no se pierde lo escrito y la
+				// contraseña no queda en la URL)
+				<input type="hidden" name="id_servicio" value={ strconv.Itoa(int(form.IDServicio)) }/>
+				<button
+					type="submit"
+					formaction="/cuenta/suscripciones/nueva/catalogo"
+					formmethod="post"
+					formnovalidate
+					class="selector-servicio"
+				>
+					if nombre := nombreServicio(servicios, form.IDServicio); nombre != "" {
+						{ nombre }
+					} else {
+						Elegí un servicio
 					}
-				</select>
-				<a class="ver-catalogo" href={ templ.URL(fmt.Sprintf("/cuenta/suscripciones/nueva?catalogo=1&servicio=%d", form.IDServicio)) }>Elegir desde el catálogo</a>
+				</button>
 			</label>
 			<label>
 				Monto mensual
@@ -72,4 +85,14 @@ templ SuscripcionForm(servicios []sqlc.Servicio, form FormSuscripcion) {
 			<button type="submit">Crear suscripción</button>
 		</form>
 	}
+}
+
+// nombreServicio devuelve el nombre del servicio elegido ("" si no hay)
+func nombreServicio(servicios []sqlc.Servicio, id int32) string {
+	for _, s := range servicios {
+		if s.IDServicio == id {
+			return s.Nombre
+		}
+	}
+	return ""
 }

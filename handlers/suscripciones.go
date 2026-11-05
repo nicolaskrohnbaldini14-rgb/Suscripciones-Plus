@@ -21,6 +21,7 @@ type opcionesLista struct {
 	Busqueda         string
 	Ver              int32
 	Editar           bool
+	Eliminar         bool // ?eliminar=1: pedir confirmación antes de borrar
 	Aviso            views.Aviso
 	FormEditar       *views.FormModificar
 	ErrorEditar      string
@@ -36,6 +37,7 @@ func (h *Web) misSuscripciones(w http.ResponseWriter, r *http.Request, usr sqlc.
 		Busqueda: strings.TrimSpace(q.Get("q")),
 		Ver:      leerEntero(q.Get("ver")),
 		Editar:   q.Get("editar") == "1",
+		Eliminar: q.Get("eliminar") == "1",
 		Aviso:    avisoDeLaURL(r),
 	})
 }
@@ -96,6 +98,7 @@ func (h *Web) renderSuscripciones(w http.ResponseWriter, r *http.Request, usr sq
 				ErrorEditar:      op.ErrorEditar,
 			}
 			det.Editando = det.Editable && (op.Editar || op.FormEditar != nil)
+			det.Eliminando = det.Editable && op.Eliminar && !det.Editando
 			if op.FormEditar != nil {
 				det.Form = *op.FormEditar
 			} else {
@@ -127,6 +130,38 @@ func (h *Web) nuevaSuscripcion(w http.ResponseWriter, r *http.Request, usr sqlc.
 	render(w, r, http.StatusOK, views.NuevaSuscripcionPage(p, form))
 }
 
+// elegirServicio abre o cierra el catálogo grande para elegir el servicio de
+// una nueva suscripción, sin perder lo que ya se escribió en el formulario.
+// Los datos llegan por POST (no quedan en la URL) y la página se vuelve a
+// dibujar con ellos; la contraseña de la cuenta no se vuelve a mostrar.
+//   - Desde el botón "Servicio" del formulario: abre el catálogo.
+//   - Desde un servicio del catálogo (o la ×): lo elige y cierra el catálogo.
+func (h *Web) elegirServicio(w http.ResponseWriter, r *http.Request, usr sqlc.Usuario) {
+	if !parsearFormulario(w, r) {
+		return
+	}
+	form := views.FormSuscripcion{
+		IDServicio:       leerEntero(r.FormValue("id_servicio")),
+		Monto:            strings.TrimSpace(r.FormValue("monto")),
+		FechaInicio:      r.FormValue("fecha_inicio"),
+		FechaVencimiento: r.FormValue("fecha_vencimiento"),
+		UsuarioCuenta:    strings.TrimSpace(r.FormValue("usuario_cuenta")),
+	}
+
+	p := h.pagina(r, "Nueva suscripción", "nueva-suscripcion", &usr)
+	if elegido := r.FormValue("elegir_servicio"); elegido != "" {
+		form.IDServicio = leerEntero(elegido)
+	} else {
+		p.Catalogo = views.Catalogo{
+			Abierto:    true,
+			Elegir:     true,
+			IDActual:   form.IDServicio,
+			Formulario: views.IDFormularioSuscripcion,
+		}
+	}
+	render(w, r, http.StatusOK, views.NuevaSuscripcionPage(p, form))
+}
+
 // crearSuscripcion guarda la suscripción a nombre del usuario de la sesión
 // (siempre Activa) y redirige al mes en que vence (Post/Redirect/Get)
 func (h *Web) crearSuscripcion(w http.ResponseWriter, r *http.Request, usr sqlc.Usuario) {
@@ -139,6 +174,14 @@ func (h *Web) crearSuscripcion(w http.ResponseWriter, r *http.Request, usr sqlc.
 		FechaInicio:      r.FormValue("fecha_inicio"),
 		FechaVencimiento: r.FormValue("fecha_vencimiento"),
 		UsuarioCuenta:    strings.TrimSpace(r.FormValue("usuario_cuenta")),
+	}
+
+	// el servicio ya no es un <select> con "required": si no se eligió, se avisa
+	if form.IDServicio == 0 {
+		p := h.pagina(r, "Nueva suscripción", "nueva-suscripcion", &usr)
+		p.Aviso = avisoError("Elegí un servicio del catálogo.")
+		render(w, r, http.StatusBadRequest, views.NuevaSuscripcionPage(p, form))
+		return
 	}
 
 	// los valores inválidos quedan en cero y los rechaza la capa de lógica;

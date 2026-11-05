@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"tp2-krohn-trapani-cicopiedi/db/sqlc"
@@ -22,6 +23,10 @@ type Catalogo struct {
 	Elegir    bool
 	IDActual  int32
 	CerrarURL string
+	// Formulario es el id del formulario de nueva suscripción: si está, cada
+	// servicio (y la ×) es un botón que vuelve a enviar ese formulario, así se
+	// elige el servicio sin perder lo que ya se escribió
+	Formulario string
 }
 
 // Pagina reúne lo que necesita el layout en todas las páginas
@@ -104,7 +109,19 @@ templ PanelServicios(p Pagina) {
 						}
 					</p>
 				</div>
-				if p.Catalogo.Abierto {
+				if p.Catalogo.Abierto && p.Catalogo.Formulario != "" {
+					<button
+						type="submit"
+						form={ p.Catalogo.Formulario }
+						formaction="/cuenta/suscripciones/nueva/catalogo"
+						formmethod="post"
+						formnovalidate
+						name="elegir_servicio"
+						value={ strconv.Itoa(int(p.Catalogo.IDActual)) }
+						class="panel-servicios-cerrar"
+						aria-label="Cerrar"
+					>×</button>
+				} else if p.Catalogo.Abierto {
 					<a href={ templ.URL(p.Catalogo.CerrarURL) } class="panel-servicios-cerrar" aria-label="Cerrar">×</a>
 				}
 			</div>
@@ -134,7 +151,18 @@ templ listaServicios(p Pagina, grupo GrupoServicios) {
 	<ul>
 		for _, s := range grupo.Servicios {
 			<li>
-				if p.Sesion != nil {
+				if p.Catalogo.Formulario != "" {
+					<button
+						type="submit"
+						form={ p.Catalogo.Formulario }
+						formaction="/cuenta/suscripciones/nueva/catalogo"
+						formmethod="post"
+						formnovalidate
+						name="elegir_servicio"
+						value={ strconv.Itoa(int(s.IDServicio)) }
+						class={ "panel-servicio", templ.KV("elegido", s.IDServicio == p.Catalogo.IDActual) }
+					>{ s.Nombre }</button>
+				} else if p.Sesion != nil {
 					<a
 						href={ templ.URL(fmt.Sprintf("/cuenta/suscripciones/nueva?servicio=%d", s.IDServicio)) }
 						class={ "panel-servicio", templ.KV("elegido", p.Catalogo.Elegir && s.IDServicio == p.Catalogo.IDActual) }

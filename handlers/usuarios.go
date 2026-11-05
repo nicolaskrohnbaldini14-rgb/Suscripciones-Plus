@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"sort"
 	"strings"
 
 	"tp2-krohn-trapani-cicopiedi/db/sqlc"
@@ -103,11 +104,22 @@ func (h *Web) cuenta(w http.ResponseWriter, r *http.Request, usr sqlc.Usuario) {
 		}
 	}
 
+	// todas las activas, de cualquier mes, ordenadas por vencimiento
+	var activas []sqlc.ListSubscripcionesUsuarioRow
+	for _, s := range todas {
+		if s.Estado == "Activa" {
+			activas = append(activas, s)
+		}
+	}
+	sort.SliceStable(activas, func(i, j int) bool {
+		return activas[i].FechaVencimiento.Before(activas[j].FechaVencimiento)
+	})
+
 	p := h.pagina(r, "Mi cuenta", "cuenta", &usr)
 	p.Aviso = avisoDeLaURL(r)
 	render(w, r, http.StatusOK, views.CuentaPage(p, views.ResumenMes{
 		NombreMes: views.NombreMes(mes),
 		Cantidad:  cantidad,
 		Total:     views.TotalActivo(delMes),
-	}))
+	}, views.Activas{Lista: activas, Total: views.TotalActivo(activas)}))
 }

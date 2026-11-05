@@ -79,15 +79,29 @@ func TestHomePage_ConSesion(t *testing.T) {
 }
 
 func TestCuentaPage(t *testing.T) {
+	activa := filaDePrueba()
 	html := renderizar(t, CuentaPage(Pagina{Clave: "cuenta", Sesion: &Sesion{Nombre: "Nico"}},
-		ResumenMes{NombreMes: "octubre de 2026", Cantidad: 1, Total: "$ 2.500,00"}))
+		ResumenMes{NombreMes: "octubre de 2026", Cantidad: 1, Total: "$ 2.500,00"},
+		Activas{Lista: []Fila{activa}, Total: "$ 32.000,00"}))
 
 	verificarContiene(t, html,
 		"Hola, Nico",
 		"En octubre de 2026 vence 1 suscripción · $ 2.500,00",
 		`href="/cuenta/suscripciones"`,
 		`href="/cuenta/suscripciones/nueva"`,
+		// panel con todas las suscripciones activas, con link a su detalle
+		"Tus suscripciones activas",
+		"1 suscripción · $ 32.000,00 por mes",
+		"Gimnasio — $ 32.000,00",
+		"Vence el 28/10/2026",
+		"martinagym",
+		`href="/cuenta/suscripciones?mes=2026-10&amp;ver=5"`,
 	)
+
+	// sin activas, el panel lo dice
+	vacia := renderizar(t, CuentaPage(Pagina{Clave: "cuenta", Sesion: &Sesion{Nombre: "Nico"}},
+		ResumenMes{NombreMes: "octubre de 2026"}, Activas{}))
+	verificarContiene(t, vacia, "No tenés suscripciones activas.")
 }
 
 func filaDePrueba() Fila {
@@ -117,7 +131,8 @@ func TestMisSuscripcionesPage_Editable(t *testing.T) {
 	verificarContiene(t, html,
 		"Gimnasio — $ 32.000,00",
 		`<span class="estado-fijo">Activa</span>`,
-		`action="/cuenta/suscripciones/5/eliminar"`,
+		// "Eliminar" lleva a la confirmación (no borra directamente)
+		`href="/cuenta/suscripciones?mes=2026-10&amp;ver=5&amp;eliminar=1"`,
 		"Modificar",
 		`name="q"`,
 		"Gasto mensual (activo): $ 32.000,00",
@@ -126,6 +141,35 @@ func TestMisSuscripcionesPage_Editable(t *testing.T) {
 	// la lista no muestra la cuenta ni las fechas (están en el detalle) y el
 	// estado se cambia desde "Modificar", no desde la lista
 	verificarNoContiene(t, html, "martinagym", "<script", `name="estado"`, "Cancelada")
+
+	// orden en cada suscripción: estado, Modificar y Eliminar
+	estado := strings.Index(html, `class="estado-fijo"`)
+	modificar := strings.Index(html, `class="btn-modificar"`)
+	eliminar := strings.Index(html, `class="btn-eliminar"`)
+	if !(estado < modificar && modificar < eliminar) {
+		t.Errorf("el orden tendría que ser estado, Modificar, Eliminar (posiciones %d, %d, %d)", estado, modificar, eliminar)
+	}
+}
+
+func TestConfirmarEliminar(t *testing.T) {
+	s := filaDePrueba()
+	d := DatosSuscripciones{
+		Mes: "2026-10", NombreMes: "octubre de 2026", EsMesActual: true,
+		Suscripciones: []Fila{s}, HayEnElMes: true, HayAlguna: true,
+		Editables: map[int32]bool{5: true},
+		Detalle:   &Detalle{Sub: s, Editable: true, Eliminando: true},
+	}
+	html := renderizar(t, MisSuscripcionesPage(Pagina{Clave: "suscripciones", Sesion: &Sesion{Nombre: "Nico"}}, d))
+
+	verificarContiene(t, html,
+		"¿Eliminar la suscripción?",
+		"Vas a eliminar la suscripción a <strong>Gimnasio</strong>",
+		"No se puede deshacer.",
+		`action="/cuenta/suscripciones/5/eliminar"`,
+		"Sí, eliminar",
+		// Cancelar vuelve a la lista sin borrar
+		`<a class="boton-secundario" href="/cuenta/suscripciones?mes=2026-10">Cancelar</a>`,
+	)
 }
 
 func TestDetalle_ModificarConEstado(t *testing.T) {
@@ -177,12 +221,25 @@ func TestNuevaSuscripcionPage(t *testing.T) {
 	html := renderizar(t, NuevaSuscripcionPage(p, FormSuscripcion{IDServicio: 3, Monto: "15000"}))
 
 	verificarContiene(t, html,
-		`<optgroup label="Deportes">`,
-		`<option value="3" selected>Pádel</option>`,
+		// el servicio va oculto y el botón muestra el elegido y abre el catálogo
+		`<input type="hidden" name="id_servicio" value="3">`,
+		`formaction="/cuenta/suscripciones/nueva/catalogo"`,
+		"Pádel",
 		`value="15000"`,
 		// el catálogo abierto en modo "elegir" con el servicio actual resaltado
 		"panel-servicios abierto modo-elegir",
 		"panel-servicio elegido",
+	)
+	// ya no hay lista desplegable del navegador
+	verificarNoContiene(t, html, `<select name="id_servicio"`, "<optgroup")
+
+	// abierto desde el formulario: cada servicio es un botón que reenvía el
+	// formulario (para no perder lo escrito)
+	p.Catalogo.Formulario = IDFormularioSuscripcion
+	conFormulario := renderizar(t, NuevaSuscripcionPage(p, FormSuscripcion{IDServicio: 3, Monto: "15000"}))
+	verificarContiene(t, conFormulario,
+		`form="form-suscripcion"`,
+		`name="elegir_servicio" value="3"`,
 	)
 	// se crea siempre activa: no se elige el estado ni el usuario
 	verificarNoContiene(t, html, `name="estado"`, `name="id_usuario"`)

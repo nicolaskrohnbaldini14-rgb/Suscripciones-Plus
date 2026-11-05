@@ -863,8 +863,8 @@ section > h2 {
   margin-left: auto;
 }
 
-/* junto al botón Modificar, el estado queda pegado a él */
-.item .btn-modificar + .estado-fijo {
+/* el estado va primero y Modificar queda pegado a él */
+.item .estado-fijo + .btn-modificar {
   margin-left: 0;
 }
 
@@ -1481,4 +1481,100 @@ a.boton-secundario {
 .buscador-lupa:hover,
 .buscador-lupa:focus-visible {
   background: rgba(0, 75, 110, 0.12);
+}
+
+/* ---------- Mi cuenta: todas las suscripciones activas ---------- */
+.activas {
+  margin-top: 24px;
+}
+
+.activas .item .boton {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ---------- Eliminar: link que lleva a la confirmación ---------- */
+a.btn-eliminar {
+  display: inline-block;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+.confirmar-eliminar .acciones-confirmar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.btn-eliminar-confirmar {
+  background: var(--peligro);
+  color: var(--crema);
+}
+
+/* ---------- Nueva suscripción: el servicio se elige en el catálogo grande ---------- */
+/* el botón se ve como un campo del formulario */
+.selector-servicio {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: var(--campo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 1rem;
+  text-align: left;
+}
+
+.selector-servicio::after {
+  content: "▾";
+  float: right;
+  color: var(--suave);
+}
+
+.selector-servicio:hover {
+  border-color: var(--primario);
+}
+
+/* Enter en un campo crea la suscripción: el botón por defecto no se ve */
+.boton-por-defecto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  border: 0;
+}
+
+/* en el catálogo para elegir, cada servicio es un botón que se ve como link */
+button.panel-servicio {
+  width: 100%;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+}
+
+button.panel-servicio:hover,
+button.panel-servicio:focus-visible {
+  background: var(--primario);
+  color: var(--crema);
+}
+
+button.panel-servicio:hover::after {
+  content: " · Elegir";
+  font-size: 0.8rem;
+}
+
+button.panel-servicio.elegido {
+  background: var(--fondo);
+  color: var(--crema);
+  font-weight: bold;
+}
+
+button.panel-servicios-cerrar {
+  cursor: pointer;
 }

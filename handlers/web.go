@@ -48,6 +48,7 @@ func (h *Web) Registrar(mux *http.ServeMux) {
 	mux.HandleFunc("GET /cuenta", h.conSesion(h.cuenta))
 	mux.HandleFunc("GET /cuenta/suscripciones", h.conSesion(h.misSuscripciones))
 	mux.HandleFunc("GET /cuenta/suscripciones/nueva", h.conSesion(h.nuevaSuscripcion))
+	mux.HandleFunc("POST /cuenta/suscripciones/nueva/catalogo", h.conSesion(h.elegirServicio))
 	mux.HandleFunc("POST /cuenta/suscripciones", h.conSesion(h.crearSuscripcion))
 	mux.HandleFunc("POST /cuenta/suscripciones/{id}/modificar", h.conSesion(h.modificar))
 	mux.HandleFunc("POST /cuenta/suscripciones/{id}/password", h.conSesion(h.revelarPassword))

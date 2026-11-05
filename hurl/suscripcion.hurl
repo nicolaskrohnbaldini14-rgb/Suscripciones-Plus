@@ -9,18 +9,70 @@ email: usuario.subs@example.com
 password: secreto123
 HTTP 303
 
-# los ids de los servicios se toman del formulario (agrupado por categoría)
+# los ids de los servicios se toman de los links del catálogo de la barra
 GET {{host}}/cuenta/suscripciones/nueva
 HTTP 200
 [Captures]
-netflix_id: xpath "string(//select[@name='id_servicio']//option[normalize-space(.)='Netflix']/@value)"
-padel_id: xpath "string(//select[@name='id_servicio']//option[normalize-space(.)='Pádel']/@value)"
-spotify_id: xpath "string(//select[@name='id_servicio']//option[normalize-space(.)='Spotify']/@value)"
+netflix_id: xpath "string(//a[contains(@class,'panel-servicio') and normalize-space(.)='Netflix']/@href)" regex "servicio=(\\d+)"
+padel_id: xpath "string(//a[contains(@class,'panel-servicio') and normalize-space(.)='Pádel']/@href)" regex "servicio=(\\d+)"
+spotify_id: xpath "string(//a[contains(@class,'panel-servicio') and normalize-space(.)='Spotify']/@href)" regex "servicio=(\\d+)"
 [Asserts]
-xpath "count(//select[@name='id_servicio']/optgroup)" == 10
+# el servicio no es una lista desplegable: es un botón que abre el catálogo grande
+xpath "count(//select[@name='id_servicio'])" == 0
+xpath "string(//form[@id='form-suscripcion']//input[@type='hidden'][@name='id_servicio']/@value)" == "0"
+xpath "normalize-space(//form[@id='form-suscripcion']//button[@class='selector-servicio'])" == "Elegí un servicio"
 # se crea siempre activa y el usuario sale de la sesión
 xpath "count(//select[@name='estado'])" == 0
 xpath "count(//select[@name='id_usuario'])" == 0
+
+# el botón del servicio abre el catálogo grande sin perder lo escrito (POST)
+POST {{host}}/cuenta/suscripciones/nueva/catalogo
+[FormParams]
+id_servicio: 0
+monto: 4500
+fecha_inicio: 2026-12-01
+fecha_vencimiento:
+usuario_cuenta: cuenta@test.com
+password_cuenta: secreta
+HTTP 200
+[Asserts]
+xpath "count(//div[contains(@class,'panel-servicios') and contains(@class,'modo-elegir') and contains(@class,'abierto')])" == 1
+xpath "count(//div[contains(@class,'modo-elegir')]//details[@class='panel-categoria'])" == 10
+# cada servicio es un botón que reenvía el formulario
+xpath "count(//div[contains(@class,'modo-elegir')]//button[contains(@class,'panel-servicio')][@form='form-suscripcion'][@name='elegir_servicio'])" >= 50
+xpath "string(//input[@name='monto']/@value)" == "4500"
+xpath "string(//input[@name='fecha_inicio']/@value)" == "2026-12-01"
+xpath "string(//input[@name='usuario_cuenta']/@value)" == "cuenta@test.com"
+# la contraseña no se vuelve a mostrar
+body not contains "secreta"
+
+# elegir un servicio del catálogo: queda elegido, se cierra el catálogo y se
+# conserva lo escrito
+POST {{host}}/cuenta/suscripciones/nueva/catalogo
+[FormParams]
+id_servicio: 0
+monto: 4500
+fecha_inicio: 2026-12-01
+fecha_vencimiento:
+usuario_cuenta: cuenta@test.com
+elegir_servicio: {{padel_id}}
+HTTP 200
+[Asserts]
+xpath "count(//div[contains(@class,'panel-servicios') and contains(@class,'abierto')])" == 0
+xpath "string(//form[@id='form-suscripcion']//input[@name='id_servicio']/@value)" == "{{padel_id}}"
+xpath "normalize-space(//form[@id='form-suscripcion']//button[@class='selector-servicio'])" == "Pádel"
+xpath "string(//input[@name='monto']/@value)" == "4500"
+
+# crear sin elegir servicio: se avisa (400)
+POST {{host}}/cuenta/suscripciones
+[FormParams]
+id_servicio: 0
+monto: 1500
+fecha_inicio: 2026-01-01
+fecha_vencimiento: 2026-12-31
+HTTP 400
+[Asserts]
+xpath "normalize-space(//div[contains(@class,'mensaje')])" == "Elegí un servicio del catálogo."
 
 # "Elegir desde el catálogo": el catálogo grande y centrado, con las categorías
 # en grilla (los servicios se despliegan al hacer clic), con Netflix resaltado
@@ -123,7 +175,7 @@ HTTP 400
 [Asserts]
 xpath "normalize-space(//div[contains(@class,'mensaje')])" contains "mayor a cero"
 xpath "string(//input[@name='fecha_inicio']/@value)" == "2026-01-01"
-xpath "string(//select[@name='id_servicio']//option[@selected]/@value)" == "{{spotify_id}}"
+xpath "string(//input[@name='id_servicio']/@value)" == "{{spotify_id}}"
 
 POST {{host}}/cuenta/suscripciones
 [FormParams]
@@ -334,7 +386,13 @@ xpath "normalize-space(//li[contains(@class,'item-solo-lectura')]//span[@class='
 xpath "normalize-space(//p[@class='total'])" == "Gasto mensual: $ 2.900,00"
 # en un mes anterior no hay botones para modificar ni eliminar
 xpath "count(//a[@class='btn-modificar'])" == 0
-xpath "count(//form[contains(@action,'/eliminar')])" == 0
+xpath "count(//a[@class='btn-eliminar'])" == 0
+
+# y tampoco se puede pedir la confirmación para eliminar
+GET {{host}}/cuenta/suscripciones?mes=2025-03&ver={{sub_vieja_id}}&eliminar=1
+HTTP 200
+[Asserts]
+xpath "count(//article[contains(@class,'confirmar-eliminar')])" == 0
 
 # el período siguiente (marzo de 2026) mantiene el día y el monto
 GET {{host}}/cuenta/suscripciones?mes=2026-03
@@ -378,7 +436,27 @@ xpath "count(//article[@id='detalle']//p[@class='aviso-lectura'])" == 1
 xpath "count(//form[contains(@action,'/modificar')])" == 0
 
 
-# ---------- 11. Eliminar una suscripción propia (303) ----------
+# ---------- 11. Eliminar una suscripción propia: primero se confirma ----------
+# en la lista, "Eliminar" es un link a la confirmación (no borra directamente)
+GET {{host}}/cuenta/suscripciones?mes=2026-12
+HTTP 200
+[Asserts]
+xpath "count(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]//a[@class='btn-eliminar'][contains(@href,'eliminar=1')])" == 1
+xpath "count(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]//form[contains(@action,'/eliminar')])" == 0
+# orden: estado, Modificar y Eliminar
+xpath "name(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]/*[2])" == "span"
+xpath "string(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]/*[3]/@class)" == "btn-modificar"
+xpath "string(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]/*[4]/@class)" == "btn-eliminar"
+
+GET {{host}}/cuenta/suscripciones?mes=2026-12&ver={{sub_otra_id}}&eliminar=1
+HTTP 200
+[Asserts]
+xpath "normalize-space(//article[contains(@class,'confirmar-eliminar')]//h2)" == "¿Eliminar la suscripción?"
+xpath "normalize-space(//article[contains(@class,'confirmar-eliminar')]//p)" contains "No se puede deshacer."
+xpath "count(//article[contains(@class,'confirmar-eliminar')]//form[@action='/cuenta/suscripciones/{{sub_otra_id}}/eliminar'])" == 1
+xpath "string(//article[contains(@class,'confirmar-eliminar')]//a[@class='boton-secundario']/@href)" == "/cuenta/suscripciones?mes=2026-12"
+
+# al confirmar se elimina (303)
 POST {{host}}/cuenta/suscripciones/{{sub_otra_id}}/eliminar
 [FormParams]
 mes: 2026-12

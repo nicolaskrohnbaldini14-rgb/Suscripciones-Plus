@@ -9,12 +9,19 @@ type ResumenMes struct {
 	Total     string
 }
 
-// CuentaPage es lo primero que ve el usuario al ingresar
-templ CuentaPage(p Pagina, resumen ResumenMes) {
-	@Layout(p, contenidoCuenta(p.Sesion, resumen))
+// Activas son todas las suscripciones activas del usuario (de cualquier mes),
+// ordenadas por vencimiento, y cuánto suman por mes
+type Activas struct {
+	Lista []Fila
+	Total string
 }
 
-templ contenidoCuenta(sesion *Sesion, resumen ResumenMes) {
+// CuentaPage es lo primero que ve el usuario al ingresar
+templ CuentaPage(p Pagina, resumen ResumenMes, activas Activas) {
+	@Layout(p, contenidoCuenta(p.Sesion, resumen, activas))
+}
+
+templ contenidoCuenta(sesion *Sesion, resumen ResumenMes, activas Activas) {
 	<section class="bienvenida">
 		<h1>Hola, { sesion.Nombre }</h1>
 		<p class="lema">En { resumen.NombreMes } { textoVencen(resumen.Cantidad) } · { resumen.Total }</p>
@@ -29,6 +36,46 @@ templ contenidoCuenta(sesion *Sesion, resumen ResumenMes) {
 			<p>Agregá un servicio al que te suscribiste para tenerlo controlado.</p>
 		</a>
 	</div>
+	@PanelActivas(activas)
+}
+
+// PanelActivas lista todas las suscripciones activas; cada una lleva al
+// detalle en el mes en que vence
+templ PanelActivas(activas Activas) {
+	<section class="panel activas" aria-labelledby="titulo-activas">
+		<h2 id="titulo-activas">Tus suscripciones activas</h2>
+		if len(activas.Lista) == 0 {
+			<ul class="lista">
+				@VacioLista("No tenés suscripciones activas.")
+			</ul>
+		} else {
+			<p class="total">{ textoCantidad(len(activas.Lista)) } · { activas.Total } por mes</p>
+			<ul class="lista" id="lista-activas">
+				for _, s := range activas.Lista {
+					<li class="item">
+						@IconoCategoria(s.ServicioCategoria)
+						<span class="item-info">
+							<strong>{ s.ServicioNombre } — { formatearMonto(s.Monto) }</strong>
+							<span class="item-detalle">
+								Vence el { formatearFecha(s.FechaVencimiento) }
+								if s.UsuarioCuenta != nil {
+									· { *s.UsuarioCuenta }
+								}
+							</span>
+						</span>
+						<a class="boton boton-chico" href={ templ.URL(UrlSuscripciones(s.FechaVencimiento.Format("2006-01"), "", s.IDSuscripcion, false)) }>Ver</a>
+					</li>
+				}
+			</ul>
+		}
+	</section>
+}
+
+func textoCantidad(cantidad int) string {
+	if cantidad == 1 {
+		return "1 suscripción"
+	}
+	return strconv.Itoa(cantidad) + " suscripciones"
 }
 
 func textoVencen(cantidad int) string {
