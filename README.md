@@ -147,8 +147,47 @@ contraseñas se guardan hasheadas.
 | `make` / `make test-api` | Genera, compila, levanta la base, corre los tests de Go y prueba la aplicación con Hurl. Al final borra contenedores y volúmenes. |
 | `make generate` | Solo genera el código de sqlc y templ. |
 | `make build` | Genera y compila. |
+| `make docker-up` | Levanta PostgreSQL esperando el healthcheck. |
+| `make test` | Solo los tests de Go (necesita el código generado y la base levantada; ver abajo). |
 | `make docker-down` | Borra contenedores y volúmenes manualmente. |
 | `make clean` | Borra el ejecutable. |
+
+## Ejecutar pruebas
+
+**Todas las pruebas juntas** (recomendado): genera el código, compila,
+levanta la base, corre los tests de Go, levanta la app, la prueba con Hurl y
+al final borra los contenedores y volúmenes.
+
+```bash
+make
+```
+
+**Solo los tests de Go** (`main_test.go`, `logic/` y `views/`): `make test`
+necesita el código de sqlc y templ generado y la base levantada, porque
+`main_test.go` prueba las consultas contra PostgreSQL. Si se corre solo, falla
+con *"Base de datos inalcanzable"* (`make: *** [test] Error 1`). Los pasos son:
+
+```bash
+make generate
+```
+(corre `sqlc generate` y `templ generate`)
+
+```bash
+make docker-up
+```
+(levanta PostgreSQL esperando el healthcheck)
+
+```bash
+make test
+```
+
+```bash
+make docker-down
+```
+(borra los contenedores y volúmenes)
+
+Los tests vacían las tablas al empezar, así que no conviene correrlos mientras
+la app está en uso con datos que se quieran conservar.
 
 # Arquitectura
 
