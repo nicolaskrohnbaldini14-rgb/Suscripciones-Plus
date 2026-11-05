@@ -64,7 +64,10 @@ templ SuscripcionForm(servicios []sqlc.Servicio, form FormSuscripcion) {
 			</label>
 			<label>
 				Monto mensual
-				<input type="number" name="monto" min="0.01" step="0.01" value={ form.Monto } required autofocus?={ form.IDServicio != 0 }/>
+				// texto (no number): sin JavaScript no se puede cambiar el mensaje del
+				// navegador ("El valor debe ser mayor o igual a 0.01"), así que valida
+				// el servidor y avisa "Ingrese un monto válido" en el aviso negro
+				<input type="text" inputmode="decimal" name="monto" value={ form.Monto } placeholder="Ej.: 4500.50" autocomplete="off" required autofocus?={ form.IDServicio != 0 }/>
 			</label>
 			<label>
 				Fecha de inicio

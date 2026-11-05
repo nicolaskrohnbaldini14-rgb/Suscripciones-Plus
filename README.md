@@ -174,14 +174,14 @@ El modelo de datos está compuesto por 4 tablas relacionales, definidas en
 - **Acceso:** cada usuario ve y modifica únicamente sus propias suscripciones.
 - **Servicios:** el catálogo viene precargado y es de solo lectura.
 - **Suscripciones:**
-  - El servicio tiene que existir; el monto tiene que ser mayor a cero y la fecha de inicio anterior a la de vencimiento.
+  - El servicio tiene que existir; el monto tiene que ser mayor a cero y de hasta $ 99.999.999,99 (lo máximo que entra en la columna `DECIMAL(10,2)`; si no, se avisa "ingrese un monto válido") y la fecha de inicio anterior a la de vencimiento.
   - Se crean siempre en estado `Activa`; después se pueden pausar y reactivar desde *Modificar* (`Activa` y `Pausada` son los únicos estados que se pueden elegir). No hay estado `Cancelada`: para dejar una suscripción se la elimina.
   - Usuario y contraseña de la cuenta del servicio son opcionales (un gimnasio o una cancha de pádel no tienen cuenta). La contraseña nunca se muestra salvo que el usuario confirme la suya.
   - Se puede tener **varias suscripciones al mismo servicio** si son cuentas distintas: desde la segunda (mientras la otra siga activa o pausada) hay que indicar el usuario de la cuenta, y no se puede repetir uno en uso (sin distinguir mayúsculas). Esta regla está en `verificarCuentaDistinta`, en `logic/suscripcion.go`.
   - **Renovación automática:** cuando una suscripción activa vence, se renueva sola por el mismo plazo con el que se registró (un mes, un año, etc.). El período vencido queda como historial con estado `Vencida` y se crea uno nuevo con el mismo monto y la misma cuenta. Se hace al iniciar la app y cada vez que se listan las suscripciones. Las pausadas no se renuevan.
   - Las suscripciones `Vencida` y las que vencen en un mes anterior al actual son de **solo lectura**.
   - En el mes actual (y los siguientes), el *Gasto mensual (activo)* suma solo lo que **falta pagar**: las suscripciones activas que todavía no vencieron (`GastoPendiente`). En un mes anterior, el *Gasto mensual* suma todo lo que venció ese mes: las activas y los períodos que ya se renovaron (`TotalActivo`). Las pausadas no suman nunca.
-- **Pagos:** la suscripción tiene que existir, el monto tiene que ser mayor a cero y la fecha de pago no puede ser posterior al vencimiento de la suscripción.
+- **Pagos:** la suscripción tiene que existir, el monto tiene que ser mayor a cero y de hasta $ 99.999.999,99 y la fecha de pago no puede ser posterior al vencimiento de la suscripción.
 
 
 

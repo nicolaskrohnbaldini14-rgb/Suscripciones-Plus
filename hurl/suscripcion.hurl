@@ -173,9 +173,25 @@ fecha_inicio: 2026-01-01
 fecha_vencimiento: 2026-12-31
 HTTP 400
 [Asserts]
-xpath "normalize-space(//div[contains(@class,'mensaje')])" contains "mayor a cero"
+xpath "normalize-space(//div[contains(@class,'mensaje')])" contains "ingrese un monto válido"
 xpath "string(//input[@name='fecha_inicio']/@value)" == "2026-01-01"
 xpath "string(//input[@name='id_servicio']/@value)" == "{{spotify_id}}"
+# el campo no tiene "min": el mensaje lo da el servidor, no el navegador
+xpath "count(//input[@name='monto'][@min])" == 0
+xpath "string(//input[@name='monto']/@inputmode)" == "decimal"
+
+# un monto que no entra en la base (DECIMAL(10,2)) se avisa (400), no es un
+# "Error interno del servidor"; lo escrito se conserva
+POST {{host}}/cuenta/suscripciones
+[FormParams]
+id_servicio: {{spotify_id}}
+monto: 99999999999
+fecha_inicio: 2026-01-01
+fecha_vencimiento: 2026-12-31
+HTTP 400
+[Asserts]
+xpath "normalize-space(//div[contains(@class,'mensaje')])" contains "ingrese un monto válido"
+xpath "string(//input[@name='monto']/@value)" == "99999999999"
 
 POST {{host}}/cuenta/suscripciones
 [FormParams]
@@ -279,6 +295,17 @@ HTTP 200
 xpath "normalize-space(//span[@class='revelada'])" == "otraclave"
 xpath "normalize-space(//dl[@class='detalle-datos']/dd[2])" == "cambiada@test.com"
 xpath "normalize-space(//p[@class='detalle-monto'])" == "$ 2.000,00 por mes"
+
+# un monto que no entra en la base también se avisa al modificar (400)
+POST {{host}}/cuenta/suscripciones/{{sub_id}}/modificar
+[FormParams]
+mes: 2026-12
+monto: 99999999999
+usuario_cuenta: cambiada@test.com
+HTTP 400
+[Asserts]
+xpath "normalize-space(//p[@class='detalle-error'])" contains "ingrese un monto válido"
+xpath "string(//form[contains(@action,'/modificar')]//input[@name='monto']/@value)" == "99999999999"
 
 # una cuenta que ya usa otra suscripción al mismo servicio (409)
 POST {{host}}/cuenta/suscripciones/{{sub_id}}/modificar

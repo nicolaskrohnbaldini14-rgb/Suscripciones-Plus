@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -32,14 +33,21 @@ var estadosValidos = map[string]bool{
 }
 
 // pregunta si esta bien esto o lo cambiamos en el schema
-// parsearMonto convierte el monto (string en sqlc) a número y valida que sea > 0
+// MontoMaximo es el monto más grande que entra en la columna monto
+// (DECIMAL(10,2): hasta 8 dígitos enteros y 2 decimales)
+const MontoMaximo = 99999999.99
+
+// ErrMontoInvalido: el monto no es un número, no es mayor a cero o no entra en
+// la base. Sin este control, un número muy grande llegaba a PostgreSQL y la
+// app respondía "Error interno del servidor".
+var ErrMontoInvalido = errors.New("ingrese un monto válido (mayor a cero y de hasta $ 99.999.999,99)")
+
+// parsearMonto convierte el monto (string en sqlc) a número y valida que sea
+// mayor a cero y que entre en la base
 func parsearMonto(monto string) (float64, error) {
 	valor, err := strconv.ParseFloat(strings.TrimSpace(monto), 64)
-	if err != nil {
-		return 0, fmt.Errorf("el monto debe ser un número válido")
-	}
-	if valor <= 0 {
-		return 0, fmt.Errorf("el monto debe ser mayor a cero")
+	if err != nil || math.IsNaN(valor) || math.IsInf(valor, 0) || valor <= 0 || valor > MontoMaximo {
+		return 0, ErrMontoInvalido
 	}
 	return valor, nil
 }
