@@ -131,10 +131,6 @@ la app está en uso con datos que se quieran conservar.
 
 # Arquitectura
 
-```
-Navegador ──(GET de páginas, POST de formularios + cookie de sesión)──▶ handlers/ ──▶ logic/ ──▶ db/sqlc ──▶ PostgreSQL
-                         ◀──────────── HTML completo ──────────── views/ (templ)
-```
 
 - **`views/`** — componentes templ (capa de presentación) y funciones de
   apoyo de las vistas (`vencimientos.go`: meses, calendario, totales).
