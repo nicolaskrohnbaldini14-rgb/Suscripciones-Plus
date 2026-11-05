@@ -1,5 +1,4 @@
-# Suscripciones+ · TP5 — Renderizado del lado del servidor con templ
-
+# Suscripciones+ · TP5
 Aplicación web en Go para registrar suscripciones y gastos recurrentes
 (streaming, música, software, deportes, salud, etc.).
 
