@@ -1500,19 +1500,6 @@ a.btn-eliminar {
   text-decoration: none;
 }
 
-.confirmar-eliminar .acciones-confirmar {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.btn-eliminar-confirmar {
-  background: var(--peligro);
-  color: var(--crema);
-}
-
 /* ---------- Nueva suscripción: el servicio se elige en el catálogo grande ---------- */
 /* el botón se ve como un campo del formulario */
 .selector-servicio {
@@ -1577,4 +1564,53 @@ button.panel-servicio.elegido {
 
 button.panel-servicios-cerrar {
   cursor: pointer;
+}
+
+/* ---------- Confirmación en el aviso negro (antes de eliminar) ---------- */
+/* queda fija arriba de la pantalla, así se ve aunque se esté abajo en la lista */
+.mensaje.mensaje-confirmar {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  width: min(42rem, calc(100% - 32px));
+  margin: 0;
+  transform: translateX(-50%);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.mensaje-acciones {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.mensaje-confirmar .boton-secundario {
+  border: 1px solid #fff;
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  text-decoration: none;
+}
+
+.mensaje-confirmar .boton-secundario:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-confirmar-aviso {
+  background: var(--peligro);
+  color: #fff;
+}
+
+.btn-confirmar-aviso:hover {
+  background: #7a2020;
+}
+
+/* TP5: el link Cancelar y el formulario del botón quedan en la misma fila */
+.mensaje-acciones .form-eliminar {
+  margin: 0;
 }

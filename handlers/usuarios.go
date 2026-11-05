@@ -121,5 +121,5 @@ func (h *Web) cuenta(w http.ResponseWriter, r *http.Request, usr sqlc.Usuario) {
 		NombreMes: views.NombreMes(mes),
 		Cantidad:  cantidad,
 		Total:     views.TotalActivo(delMes),
-	}, views.Activas{Lista: activas, Total: views.TotalActivo(activas)}))
+	}, views.Activas{Lista: activas}))
 }

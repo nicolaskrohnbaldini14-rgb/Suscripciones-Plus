@@ -392,7 +392,7 @@ xpath "count(//a[@class='btn-eliminar'])" == 0
 GET {{host}}/cuenta/suscripciones?mes=2025-03&ver={{sub_vieja_id}}&eliminar=1
 HTTP 200
 [Asserts]
-xpath "count(//article[contains(@class,'confirmar-eliminar')])" == 0
+xpath "count(//div[contains(@class,'mensaje-confirmar')])" == 0
 
 # el período siguiente (marzo de 2026) mantiene el día y el monto
 GET {{host}}/cuenta/suscripciones?mes=2026-03
@@ -451,10 +451,11 @@ xpath "string(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]/*[4]/@class)" ==
 GET {{host}}/cuenta/suscripciones?mes=2026-12&ver={{sub_otra_id}}&eliminar=1
 HTTP 200
 [Asserts]
-xpath "normalize-space(//article[contains(@class,'confirmar-eliminar')]//h2)" == "¿Eliminar la suscripción?"
-xpath "normalize-space(//article[contains(@class,'confirmar-eliminar')]//p)" contains "No se puede deshacer."
-xpath "count(//article[contains(@class,'confirmar-eliminar')]//form[@action='/cuenta/suscripciones/{{sub_otra_id}}/eliminar'])" == 1
-xpath "string(//article[contains(@class,'confirmar-eliminar')]//a[@class='boton-secundario']/@href)" == "/cuenta/suscripciones?mes=2026-12"
+# la pregunta aparece en el aviso negro de los mensajes
+xpath "normalize-space(//div[contains(@class,'mensaje-confirmar')]/span[@id='confirmar-texto'])" contains "¿Seguro que querés eliminar la suscripción a Netflix?"
+xpath "normalize-space(//div[contains(@class,'mensaje-confirmar')])" contains "No se puede deshacer."
+xpath "count(//div[contains(@class,'mensaje-confirmar')]//form[@action='/cuenta/suscripciones/{{sub_otra_id}}/eliminar'])" == 1
+xpath "string(//div[contains(@class,'mensaje-confirmar')]//a[contains(@class,'boton-secundario')]/@href)" == "/cuenta/suscripciones?mes=2026-12"
 
 # al confirmar se elimina (303)
 POST {{host}}/cuenta/suscripciones/{{sub_otra_id}}/eliminar

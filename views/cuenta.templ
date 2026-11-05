@@ -10,10 +10,9 @@ type ResumenMes struct {
 }
 
 // Activas son todas las suscripciones activas del usuario (de cualquier mes),
-// ordenadas por vencimiento, y cuánto suman por mes
+// ordenadas por vencimiento
 type Activas struct {
 	Lista []Fila
-	Total string
 }
 
 // CuentaPage es lo primero que ve el usuario al ingresar
@@ -49,7 +48,7 @@ templ PanelActivas(activas Activas) {
 				@VacioLista("No tenés suscripciones activas.")
 			</ul>
 		} else {
-			<p class="total">{ textoCantidad(len(activas.Lista)) } · { activas.Total } por mes</p>
+			<p class="total">{ textoCantidad(len(activas.Lista)) }</p>
 			<ul class="lista" id="lista-activas">
 				for _, s := range activas.Lista {
 					<li class="item">

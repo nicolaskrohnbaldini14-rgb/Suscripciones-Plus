@@ -135,28 +135,20 @@ templ Calendario(d DatosSuscripciones) {
 }
 
 // DetalleSuscripcion se dibuja sobre la lista desenfocada. El fondo y la ×
-// ConfirmarEliminar pide confirmación antes de eliminar una suscripción: el
+// ConfirmarEliminar pide confirmación antes de eliminar una suscripción, en
+// el mismo aviso negro de los mensajes (fijo arriba de la pantalla): el
 // borrado es un POST que no se puede deshacer
 templ ConfirmarEliminar(d DatosSuscripciones, det Detalle) {
-	<div class="detalle-fondo">
-		<a class="detalle-fondo-cerrar" href={ templ.URL(UrlSuscripciones(d.Mes, d.Busqueda, 0, false)) } aria-label="Cancelar"></a>
-		<article id="detalle" class="detalle confirmar-eliminar" role="alertdialog" aria-modal="true" aria-labelledby="confirmar-titulo">
-			<div class="detalle-contenido">
-				<h2 id="confirmar-titulo">¿Eliminar la suscripción?</h2>
-				<p>
-					Vas a eliminar la suscripción a <strong>{ det.Sub.ServicioNombre }</strong>
-					({ formatearMonto(det.Sub.Monto) } por mes). No se puede deshacer.
-				</p>
-				<div class="acciones-confirmar">
-					<a class="boton-secundario" href={ templ.URL(UrlSuscripciones(d.Mes, d.Busqueda, 0, false)) }>Cancelar</a>
-					<form method="post" action={ templ.URL(fmt.Sprintf("/cuenta/suscripciones/%d/eliminar", det.Sub.IDSuscripcion)) } class="form-eliminar">
-						<input type="hidden" name="mes" value={ d.Mes }/>
-						<input type="hidden" name="q" value={ d.Busqueda }/>
-						<button type="submit" class="btn-eliminar-confirmar">Sí, eliminar</button>
-					</form>
-				</div>
-			</div>
-		</article>
+	<div class="mensaje error mensaje-confirmar" role="alertdialog" aria-labelledby="confirmar-texto">
+		<span id="confirmar-texto">¿Seguro que querés eliminar la suscripción a { det.Sub.ServicioNombre }? No se puede deshacer.</span>
+		<span class="mensaje-acciones">
+			<a class="boton-secundario boton-chico" href={ templ.URL(UrlSuscripciones(d.Mes, d.Busqueda, 0, false)) }>Cancelar</a>
+			<form method="post" action={ templ.URL(fmt.Sprintf("/cuenta/suscripciones/%d/eliminar", det.Sub.IDSuscripcion)) } class="form-eliminar">
+				<input type="hidden" name="mes" value={ d.Mes }/>
+				<input type="hidden" name="q" value={ d.Busqueda }/>
+				<button type="submit" class="btn-confirmar-aviso boton-chico">Sí, eliminar</button>
+			</form>
+		</span>
 	</div>
 }
 

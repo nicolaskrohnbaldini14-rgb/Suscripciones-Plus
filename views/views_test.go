@@ -82,7 +82,7 @@ func TestCuentaPage(t *testing.T) {
 	activa := filaDePrueba()
 	html := renderizar(t, CuentaPage(Pagina{Clave: "cuenta", Sesion: &Sesion{Nombre: "Nico"}},
 		ResumenMes{NombreMes: "octubre de 2026", Cantidad: 1, Total: "$ 2.500,00"},
-		Activas{Lista: []Fila{activa}, Total: "$ 32.000,00"}))
+		Activas{Lista: []Fila{activa}}))
 
 	verificarContiene(t, html,
 		"Hola, Nico",
@@ -91,7 +91,7 @@ func TestCuentaPage(t *testing.T) {
 		`href="/cuenta/suscripciones/nueva"`,
 		// panel con todas las suscripciones activas, con link a su detalle
 		"Tus suscripciones activas",
-		"1 suscripción · $ 32.000,00 por mes",
+		`<p class="total">1 suscripción</p>`,
 		"Gimnasio — $ 32.000,00",
 		"Vence el 28/10/2026",
 		"martinagym",
@@ -162,13 +162,13 @@ func TestConfirmarEliminar(t *testing.T) {
 	html := renderizar(t, MisSuscripcionesPage(Pagina{Clave: "suscripciones", Sesion: &Sesion{Nombre: "Nico"}}, d))
 
 	verificarContiene(t, html,
-		"¿Eliminar la suscripción?",
-		"Vas a eliminar la suscripción a <strong>Gimnasio</strong>",
-		"No se puede deshacer.",
+		// la pregunta va en el aviso negro, como los demás mensajes
+		`class="mensaje error mensaje-confirmar"`,
+		"¿Seguro que querés eliminar la suscripción a Gimnasio? No se puede deshacer.",
 		`action="/cuenta/suscripciones/5/eliminar"`,
 		"Sí, eliminar",
 		// Cancelar vuelve a la lista sin borrar
-		`<a class="boton-secundario" href="/cuenta/suscripciones?mes=2026-10">Cancelar</a>`,
+		`<a class="boton-secundario boton-chico" href="/cuenta/suscripciones?mes=2026-10">Cancelar</a>`,
 	)
 }
 
