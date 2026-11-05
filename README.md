@@ -41,8 +41,7 @@ make run-app
 
 Luego abrir <http://localhost:8080>. Para detener la aplicación: `Ctrl+C`.
 
-Al iniciar, la aplicación precarga el catálogo de servicios (ver
-[Catálogo de servicios]). Para probarla: registrarse,
+Al iniciar, la aplicación precarga el catálogo de servicios. Para probarla: registrarse,
 tocar un servicio en **Servicios ▾** (o ir a *Nueva suscripción*), crear
 algunas suscripciones y verlas en *Mis suscripciones*.
 
@@ -52,8 +51,7 @@ algunas suscripciones y verlas en *Mis suscripciones*.
    - `sqlc generate`: genera el acceso a datos en `db/sqlc/`.
    - `templ generate`: compila los componentes `.templ` a código Go (`*_templ.go`).
    - Compila el ejecutable en `tmp/`.
-   - Si no existe `.env`, lo crea copiando `.env.example` (ver
-     [Variables de entorno](#variables-de-entorno-env)).
+   - Si no existe `.env`, lo crea copiando `.env.example` .
    - Borra contenedores y volúmenes previos (`docker compose down -v`).
    - Levanta PostgreSQL (`docker compose up -d --wait`) y espera a que el
      healthcheck (`pg_isready`) indique que la base está lista. El esquema se
@@ -164,7 +162,7 @@ Navegador ──(GET de páginas, POST de formularios + cookie de sesión)──
 # Documentación de persistencia
 
 El modelo de datos está compuesto por 4 tablas relacionales, definidas en
-[`db/schema/schema.sql`](db/schema/schema.sql):
+[`db/schema/schema.sql`]
 
 | Tabla | Descripción |
 |---|---|
