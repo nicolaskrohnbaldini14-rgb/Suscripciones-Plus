@@ -150,9 +150,20 @@ Navegador ──(GET de páginas, POST de formularios + cookie de sesión)──
 
 - **`views/`** — componentes templ (capa de presentación) y funciones de
   apoyo de las vistas (`vencimientos.go`: meses, calendario, totales).
-- **`handlers/`** — handlers HTTP (`web.go`) y sesiones (`sesiones.go`): leen
-  el formulario, verifican la sesión, llaman a la lógica y renderizan la
-  vista o redirigen. Reemplazan a los handlers JSON del TP4.
+- **`handlers/`** — handlers HTTP: leen el formulario, verifican la sesión,
+  llaman a la lógica y renderizan la vista o redirigen. Reemplazan a los
+  handlers JSON del TP4. Como sugiere la clase de lógica del negocio
+  ("estructura limpia": handlers separados por rutas, funciones auxiliares y
+  manejo centralizado de errores), están separados en archivos:
+  - `web.go`: todas las rutas (`Registrar`);
+  - `usuarios.go`: inicio, login, registro, logout y mi cuenta;
+  - `suscripciones.go`: lista del mes, alta, modificar, ver la contraseña y eliminar;
+  - `comunes.go`: lo que comparten las páginas (sesión, layout, avisos,
+    renderizado y `describirError`, que traduce los errores de la lógica a
+    códigos HTTP);
+  - `formularios.go`: lectura de formularios y parámetros, y filtros por mes y
+    búsqueda;
+  - `sesiones.go`: la cookie de sesión.
 - **`logic/`** — reglas de negocio (validaciones, contraseñas con bcrypt,
   catálogo precargado, renovación automática, cuentas distintas, solo
   lectura). Es la misma lógica del TP4, sin la parte HTTP.
@@ -335,7 +346,11 @@ borrar servicios desde la aplicación.
 ├── main.go                 # Conexión, catálogo, renovación y servidor HTTP
 ├── main_test.go            # Tests de integración de sqlc
 ├── handlers/
-│   ├── web.go              # Rutas, sesión y handlers HTML
+│   ├── web.go              # Todas las rutas
+│   ├── usuarios.go         # Inicio, login, registro, logout y mi cuenta
+│   ├── suscripciones.go    # Lista, alta, modificar, contraseña y eliminar
+│   ├── comunes.go          # Sesión de la página, renderizado, avisos y errores
+│   ├── formularios.go      # Lectura de formularios y filtros
 │   └── sesiones.go         # Sesiones con cookie HttpOnly
 ├── logic/                  # Reglas de negocio (+ renovacion.go y sus tests, datos_de_prueba.go)
 ├── views/                  # Componentes templ, vencimientos.go y views_test.go
