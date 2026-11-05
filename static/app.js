@@ -483,13 +483,20 @@ function prepararPanelServicios() {
     elegir(servicio.dataset.id);
   });
 
-  boton.addEventListener("mouseenter", abrir);
+  // mientras se elige el servicio de una nueva suscripción el panel grande
+  // queda abierto: pasar por el botón "Servicios" o salir de él no lo cambia
+  // por el de la barra ni lo cierra (se cierra con la ×, Escape o eligiendo)
+  const abrirDesdeLaBarra = () => {
+    if (!alElegir) abrir();
+  };
+  boton.addEventListener("mouseenter", abrirDesdeLaBarra);
   // el clic siempre abre (no alterna): con el mouse, el panel ya se abrió al
   // acercarse, y si el clic lo cerrara parecería que no funciona
-  boton.addEventListener("click", abrir);
+  boton.addEventListener("click", abrirDesdeLaBarra);
   // al salir del botón y del panel se cierra (con una pequeña demora para
   // poder pasar de uno al otro sin que se cierre)
   contenedor.addEventListener("mouseleave", () => {
+    if (alElegir) return;
     temporizador = setTimeout(cerrar, 200);
   });
   contenedor.addEventListener("mouseenter", () => clearTimeout(temporizador));
@@ -642,6 +649,47 @@ async function paginaCuenta(sesion) {
   const texto = activas === 1 ? "vence 1 suscripción" : `vencen ${activas} suscripciones`;
   document.getElementById("resumen").textContent =
     `En ${nombreMes(mes)} ${texto} · ${formatoPesos.format(totalActivo(delMes))}`;
+
+  pintarActivas(todas);
+}
+
+// pintarActivas muestra en /cuenta todas las suscripciones activas (de
+// cualquier mes), ordenadas por vencimiento, con un link al mes en que vencen
+function pintarActivas(todas) {
+  const lista = document.getElementById("lista-activas");
+  const total = document.getElementById("total-activas");
+  // página sin el panel (versión vieja guardada en el navegador)
+  if (!lista || !total) return;
+
+  const activas = todas
+    .filter((s) => s.estado === "Activa")
+    .sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento));
+  if (activas.length === 0) {
+    total.textContent = "";
+    mostrarVacio(lista, "No tenés suscripciones activas.");
+    return;
+  }
+
+  const suma = activas.reduce((acumulado, s) => acumulado + Number(s.monto), 0);
+  total.textContent =
+    `${activas.length === 1 ? "1 suscripción" : `${activas.length} suscripciones`} · ` +
+    `${formatoPesos.format(suma)} por mes`;
+
+  lista.replaceChildren(
+    ...activas.map((s) => {
+      const cuenta = s.usuario_cuenta ? ` · ${s.usuario_cuenta}` : "";
+      const li = crearItem(
+        `${s.servicio_nombre} — ${formatoPesos.format(Number(s.monto))}`,
+        `Vence el ${formatearFecha(s.fecha_vencimiento)}${cuenta}`
+      );
+      const logo = iconoCategoria(s.servicio_categoria);
+      logo.title = s.servicio_categoria;
+      li.prepend(logo);
+      const ver = enlace(`suscripciones.html?mes=${s.fecha_vencimiento.slice(0, 7)}`, "Ver el mes", "boton boton-chico");
+      li.append(ver);
+      return li;
+    })
+  );
 }
 
 async function paginaSuscripciones(sesion) {
@@ -748,6 +796,10 @@ async function paginaSuscripciones(sesion) {
     if (abrirDesde(evento)) return;
     const boton = evento.target.closest(".btn-eliminar");
     if (!boton) return;
+    // se pide confirmación antes de borrar: no se puede deshacer
+    const sub = suscripciones.find((s) => String(s.id_suscripcion) === boton.dataset.id);
+    const nombre = sub ? `la suscripción a ${sub.servicio_nombre}` : "esta suscripción";
+    if (!confirm(`¿Seguro que querés eliminar ${nombre}? No se puede deshacer.`)) return;
     try {
       await pedir(`/suscripciones/${boton.dataset.id}`, { method: "DELETE" });
       mostrarMensaje("Suscripción eliminada.");
@@ -798,8 +850,8 @@ function itemSuscripcion(s, editable) {
   botonModificar.dataset.id = s.id_suscripcion;
   botonModificar.textContent = "Modificar";
 
-  // el estado (activa o pausada) se cambia desde "Modificar"
-  li.querySelector(".btn-eliminar").before(botonModificar, estado);
+  // orden: estado (se cambia desde "Modificar"), Modificar y Eliminar
+  li.querySelector(".btn-eliminar").before(estado, botonModificar);
   return li;
 }
 
@@ -1040,7 +1092,7 @@ const paginas = {
 // Versión de las páginas HTML. Si el navegador muestra una copia vieja
 // guardada (sin esta versión), se recarga una sola vez para pedir la nueva:
 // al recargar, el navegador consulta al servidor.
-const VERSION_PAGINAS = "2026-11-04d";
+const VERSION_PAGINAS = "2026-11-05";
 
 function recargarSiEstaDesactualizada() {
   const meta = document.querySelector('meta[name="version-pagina"]');

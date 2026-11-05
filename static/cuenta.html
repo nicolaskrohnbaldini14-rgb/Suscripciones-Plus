@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- si cambia, app.js recarga las copias viejas que tenga guardadas el navegador -->
-  <meta name="version-pagina" content="2026-11-04d">
+  <meta name="version-pagina" content="2026-11-05">
   <title>Mi cuenta · Suscripciones+</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -52,6 +52,13 @@
         <p>Agregá un servicio al que te suscribiste para tenerlo controlado.</p>
       </a>
     </div>
+
+    <!-- todas las suscripciones activas del usuario (las completa app.js) -->
+    <section class="panel activas" aria-labelledby="titulo-activas">
+      <h2 id="titulo-activas">Tus suscripciones activas</h2>
+      <p id="total-activas" class="total"></p>
+      <ul id="lista-activas" class="lista"></ul>
+    </section>
   </main>
 
   <footer class="pie">
