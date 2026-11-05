@@ -84,16 +84,24 @@ con `CARGAR_USUARIOS_DE_PRUEBA=false`. La carga está en
 servicios de la app, así que pasa por las mismas validaciones y las
 contraseñas se guardan hasheadas.
 
-## Esperas
+## Esperas y health checks
 
 - **Base de datos:** `docker compose up --wait` espera el healthcheck
   (`pg_isready`), que se reintenta durante unos 2 minutos. Además, la
   aplicación reintenta conectarse cada un segundo durante 60 segundos antes de
   rendirse, por si la base tarda en aceptar conexiones.
-- **Aplicación (pruebas):** antes de correr Hurl, el makefile consulta la app
-  cada un segundo hasta que responda, con un máximo de `ESPERA_APP` segundos
-  (60 por defecto). Si la app se cae o no responde a tiempo, lo informa y borra
-  los contenedores.
+- **Aplicación:** tiene su propio health check en [`salud.go`](salud.go),
+  con dos rutas públicas que responden JSON:
+
+  | Método | Ruta | Respuestas |
+  |---|---|---|
+  | `GET` | `/salud/vivo` | `200 {"estado":"vivo"}`: el proceso está corriendo (*liveness*). |
+  | `GET` | `/salud/lista` | `200 {"estado":"lista"}`: además la base de datos responde y la app puede trabajar (*readiness*) · `503 {"estado":"sin base de datos"}` si la base no contesta en 2 segundos. |
+
+- **Aplicación (pruebas):** antes de correr Hurl, el makefile consulta
+  `/salud/lista` cada un segundo hasta que dé `200`, con un máximo de
+  `ESPERA_APP` segundos (60 por defecto). Si la app se cae o no queda lista a
+  tiempo, lo informa y borra los contenedores.
 
 ## Ejecutar pruebas (tests de sqlc + pruebas Hurl de la API)
 ```bash
@@ -414,12 +422,14 @@ de las acciones protegidas.
 | `suscripcion.hurl` | CRUD de suscripciones, varias suscripciones al mismo servicio con cuentas distintas, alta sin credenciales, `400` al crearlas pausadas o con el estado `Cancelada` (ya no existe), pausar y reactivar, renovación automática con el mismo plazo, `403` al modificar períodos vencidos, `404` sobre suscripciones ajenas y `401` sin sesión. |
 | `pago.hurl` | Pagos sobre suscripciones propias, `404` sobre pagos ajenos y `401` sin sesión. |
 | `datos_de_prueba.hurl` | Que los usuarios de prueba del `.env` puedan entrar y tengan sus suscripciones de ejemplo (incluida la renovación automática). |
+| `salud.hurl` | Health check de la aplicación: `/salud/vivo` y `/salud/lista` responden `200` con su estado, y solo aceptan `GET`. |
 
 # Estructura del proyecto
 
 ```
 .
 ├── main.go               # Conexión a la base, armado de capas, rutas HTTP y frontend
+├── salud.go              # Health check de la aplicación (/salud/vivo y /salud/lista)
 ├── main_test.go          # Tests de integración CRUD de cada tabla (sqlc)
 ├── static/               # Frontend del TP4 (servido en /)
 │   ├── index.html        # Inicio público

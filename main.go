@@ -90,6 +90,9 @@ func main() {
 	http.HandleFunc("/pagos/", proteger([]string{get, del}, manejadorPago.ManejarPagoPorID))                  // GET, DELETE (propios)
 	http.HandleFunc("/pagos/suscripcion/", proteger([]string{get}, manejadorPago.ManejarPagosPorSuscripcion)) // GET (propios)
 
+	// health check de la aplicación: GET /salud/vivo y /salud/lista (salud.go)
+	registrarSalud(http.DefaultServeMux, dbConn)
+
 	// 7. Frontend (TP4): HTML, CSS y JS estáticos que consumen la API.
 	// Las rutas de la API son más específicas, así que tienen prioridad sobre "/".
 	// "no-cache" hace que el navegador pregunte siempre si hay una versión nueva
