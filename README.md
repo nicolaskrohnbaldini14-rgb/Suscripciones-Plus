@@ -310,7 +310,7 @@ borrar servicios desde la aplicación.
   - El servicio tiene que existir; el monto tiene que ser mayor a cero y la fecha de inicio anterior a la de vencimiento.
   - Se crean siempre en estado `Activa`; después se pueden pausar y reactivar desde *Modificar* (`Activa` y `Pausada` son los únicos estados que se pueden elegir). No hay estado `Cancelada`: para dejar una suscripción se la elimina.
   - Usuario y contraseña de la cuenta del servicio son opcionales (un gimnasio o una cancha de pádel no tienen cuenta). La contraseña nunca se muestra salvo que el usuario confirme la suya.
-  - Se puede tener **varias suscripciones al mismo servicio** si son cuentas distintas: desde la segunda (mientras la otra siga activa o pausada) hay que indicar el usuario de la cuenta, y no se puede repetir uno en uso (sin distinguir mayúsculas).
+  - Se puede tener **varias suscripciones al mismo servicio** si son cuentas distintas: desde la segunda (mientras la otra siga activa o pausada) hay que indicar el usuario de la cuenta, y no se puede repetir uno en uso (sin distinguir mayúsculas). Esta regla está en `verificarCuentaDistinta`, en `logic/suscripcion.go`.
   - **Renovación automática:** cuando una suscripción activa vence, se renueva sola por el mismo plazo con el que se registró (un mes, un año, etc.). El período vencido queda como historial con estado `Vencida` y se crea uno nuevo con el mismo monto y la misma cuenta. Se hace al iniciar la app y cada vez que se listan las suscripciones. Las pausadas no se renuevan.
   - Las suscripciones `Vencida` y las que vencen en un mes anterior al actual son de **solo lectura**.
   - En el mes actual (y los siguientes), el *Gasto mensual (activo)* suma solo lo que **falta pagar**: las suscripciones activas que todavía no vencieron (`GastoPendiente`). En un mes anterior, el *Gasto mensual* suma todo lo que venció ese mes: las activas y los períodos que ya se renovaron (`TotalActivo`). Las pausadas no suman nunca.
@@ -323,8 +323,10 @@ borrar servicios desde la aplicación.
 1. **Tests de Go** (`go test ./...`):
    - `main_test.go`: CRUD de cada tabla con sqlc contra PostgreSQL en Docker
      (incluida una suscripción sin credenciales).
-   - `logic/renovacion_test.go`: cálculo del plazo de renovación, regla de
-     solo lectura y comparación de cuentas.
+   - `logic/renovacion_test.go`: cálculo del plazo de renovación y regla de
+     solo lectura.
+   - `logic/suscripcion_test.go`: comparación de cuentas (para exigir cuentas
+     distintas en el mismo servicio).
    - `views/views_test.go`: renderiza los componentes templ sin base de datos
      (panel de servicios, lista editable y de solo lectura, detalle,
      formulario con datos conservados, calendario, meses, escape de HTML).
@@ -352,7 +354,7 @@ borrar servicios desde la aplicación.
 │   ├── comunes.go          # Sesión de la página, renderizado, avisos y errores
 │   ├── formularios.go      # Lectura de formularios y filtros
 │   └── sesiones.go         # Sesiones con cookie HttpOnly
-├── logic/                  # Reglas de negocio (+ renovacion.go y sus tests, datos_de_prueba.go)
+├── logic/                  # Reglas de negocio sin HTTP: suscripcion.go (incluye cuentas distintas), renovacion.go (renovación y solo lectura), datos_de_prueba.go y sus tests
 ├── views/                  # Componentes templ, vencimientos.go y views_test.go
 ├── static/styles.css       # Estilos (sin JavaScript)
 ├── db/
