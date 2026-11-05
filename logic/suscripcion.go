@@ -19,6 +19,13 @@ import (
 // de un servicio, el usuario no confirma bien su propia contraseña
 var ErrPasswordUsuario = fmt.Errorf("la contraseña de tu usuario no es correcta")
 
+// ErrCuentaRequerida y ErrCuentaRepetida aplican cuando un usuario tiene más
+// de una suscripción al mismo servicio: cada una tiene que ser otra cuenta.
+var (
+	ErrCuentaRequerida = errors.New("para agregar otra, indicá el usuario de la cuenta para diferenciarla")
+	ErrCuentaRepetida  = errors.New("usá otro usuario de cuenta para diferenciarla")
+)
+
 // Estados permitidos según las reglas de negocio. No hay estado "Cancelada":
 // para dejar una suscripción se la elimina.
 var estadosValidos = map[string]bool{
@@ -279,6 +286,61 @@ func (s *ServicioSuscripcion) Eliminar(ctx context.Context, id int32) error {
 	}
 
 	return s.consultas.DeleteSubscripcion(ctx, id)
+}
+
+// ---------------------------------------------------------------------------
+// Varias suscripciones al mismo servicio: tienen que ser cuentas distintas
+// ---------------------------------------------------------------------------
+
+// mismaCuenta compara usuarios de cuenta sin distinguir mayúsculas; dos
+// suscripciones sin cuenta (nil) cuentan como la misma
+func mismaCuenta(a, b *string) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return strings.EqualFold(*a, *b)
+}
+
+// verificarCuentaDistinta controla las suscripciones vigentes (activas o
+// pausadas) del usuario al mismo servicio, sin contar la que se está
+// modificando (excluir). Al crear (exigirCuenta) la segunda en adelante tiene
+// que indicar un usuario de cuenta; en todos los casos no se puede repetir.
+func (s *ServicioSuscripcion) verificarCuentaDistinta(ctx context.Context, idUsuario, idServicio int32, cuenta *string, excluir int32, exigirCuenta bool) error {
+	vigentes, err := s.consultas.ListSuscripcionesVigentes(ctx, sqlc.ListSuscripcionesVigentesParams{
+		IDUsuario:  idUsuario,
+		IDServicio: idServicio,
+	})
+	if err != nil {
+		return err
+	}
+
+	var otras []sqlc.Suscripcion
+	for _, v := range vigentes {
+		if v.IDSuscripcion != excluir {
+			otras = append(otras, v)
+		}
+	}
+	if len(otras) == 0 {
+		return nil
+	}
+
+	nombre := "este servicio"
+	if srv, err := s.consultas.GetServicio(ctx, idServicio); err == nil {
+		nombre = srv.Nombre
+	}
+
+	if exigirCuenta && cuenta == nil {
+		return fmt.Errorf("ya tenés una suscripción a %s: %w", nombre, ErrCuentaRequerida)
+	}
+	for _, o := range otras {
+		if mismaCuenta(o.UsuarioCuenta, cuenta) {
+			if cuenta == nil {
+				return fmt.Errorf("ya tenés una suscripción a %s sin usuario de cuenta: %w", nombre, ErrCuentaRepetida)
+			}
+			return fmt.Errorf("ya tenés una suscripción a %s con la cuenta %q: %w", nombre, *cuenta, ErrCuentaRepetida)
+		}
+	}
+	return nil
 }
 
 type ManejadorSuscripcion struct {
