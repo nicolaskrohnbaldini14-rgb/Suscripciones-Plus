@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- si cambia, app.js recarga las copias viejas que tenga guardadas el navegador -->
-  <meta name="version-pagina" content="2026-11-05c">
+  <meta name="version-pagina" content="2026-11-05d">
   <title>Mis suscripciones · Suscripciones+</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -83,7 +83,7 @@
       <!-- modificar monto, usuario y contraseña de la cuenta (solo si no es de solo lectura) -->
       <form id="form-editar" class="formulario editar-suscripcion" hidden>
         <label>Monto mensual
-          <input type="number" name="monto" min="0.01" step="0.01" required>
+          <input type="number" name="monto" min="0.01" max="99999999.99" step="0.01" required>
         </label>
         <label>Usuario de la cuenta del servicio
           <input type="text" name="usuario_cuenta" autocomplete="off" placeholder="Sin cuenta">

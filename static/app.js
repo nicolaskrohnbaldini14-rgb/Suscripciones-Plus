@@ -45,6 +45,17 @@ function mostrarError(error) {
   mostrarMensaje(error.message, "error");
 }
 
+// prepararCamposMonto: si el monto no es válido (vacío, cero, negativo, con
+// más de 2 decimales o más grande de lo que entra en la base), el navegador
+// muestra "Ingrese un monto válido" en vez de su mensaje (por ejemplo "El
+// valor debe ser mayor o igual a 0.01")
+function prepararCamposMonto() {
+  for (const campo of document.querySelectorAll('input[name="monto"]')) {
+    campo.addEventListener("invalid", () => campo.setCustomValidity("Ingrese un monto válido"));
+    campo.addEventListener("input", () => campo.setCustomValidity(""));
+  }
+}
+
 // confirmarEnAviso hace una pregunta en el mismo aviso negro de los mensajes
 // (en vez de la ventana del navegador), con "Cancelar" y el botón para
 // confirmar. Devuelve una promesa: true si se confirma, false si se cancela
@@ -1136,7 +1147,7 @@ const paginas = {
 // Versión de las páginas HTML. Si el navegador muestra una copia vieja
 // guardada (sin esta versión), se recarga una sola vez para pedir la nueva:
 // al recargar, el navegador consulta al servidor.
-const VERSION_PAGINAS = "2026-11-05c";
+const VERSION_PAGINAS = "2026-11-05d";
 
 function recargarSiEstaDesactualizada() {
   const meta = document.querySelector('meta[name="version-pagina"]');
@@ -1160,7 +1171,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // la barra y el panel de servicios son "extras": si algo falla ahí, la
   // página tiene que seguir funcionando (formularios, listas, etc.)
-  for (const paso of [() => pintarBarra(sesion), prepararPanelServicios, () => cargarMenuServicios(sesion)]) {
+  for (const paso of [() => pintarBarra(sesion), prepararPanelServicios, () => cargarMenuServicios(sesion), prepararCamposMonto]) {
     try {
       paso();
     } catch (error) {

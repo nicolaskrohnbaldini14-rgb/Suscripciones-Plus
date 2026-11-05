@@ -21,6 +21,11 @@ func parsearMontoPago(monto string) (float64, error) {
 	if valor <= 0 {
 		return 0, fmt.Errorf("el monto del pago debe ser mayor a cero")
 	}
+	// tiene que entrar en la columna monto (DECIMAL(10,2)): si no, la base
+	// lo rechaza y la app respondería "Error interno del servidor"
+	if valor > MontoMaximo {
+		return 0, fmt.Errorf("el monto del pago debe ser un número válido de hasta $ 99.999.999,99")
+	}
 	return valor, nil
 }
 

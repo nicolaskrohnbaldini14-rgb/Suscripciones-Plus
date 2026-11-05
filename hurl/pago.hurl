@@ -103,6 +103,18 @@ HTTP 400
 [Asserts]
 body contains "mayor a cero"
 
+# un monto que no entra en la base (DECIMAL(10,2)) es un error del usuario (400)
+POST {{host}}/pagos
+Content-Type: application/json
+{
+  "id_suscripcion": {{suscripcion_id}},
+  "monto": "99999999999",
+  "fecha_pago": "2026-06-15T00:00:00Z"
+}
+HTTP 400
+[Asserts]
+body contains "hasta $ 99.999.999,99"
+
 ### ---------- 5. Monto no numérico (400) ----------
 POST {{host}}/pagos
 Content-Type: application/json

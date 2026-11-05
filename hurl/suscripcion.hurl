@@ -182,7 +182,40 @@ Content-Type: application/json
 }
 HTTP 400
 [Asserts]
-body contains "mayor a cero"
+body contains "ingrese un monto válido"
+
+# un monto que no entra en la base (DECIMAL(10,2)) es un error del usuario
+# (400), no un error interno (500)
+POST {{host}}/suscripciones
+Content-Type: application/json
+{
+  "id_servicio": {{servicio_id}},
+  "monto": "99999999999",
+  "fecha_inicio": "2026-01-01T00:00:00Z",
+  "fecha_vencimiento": "2026-12-31T00:00:00Z"
+}
+HTTP 400
+[Asserts]
+body contains "ingrese un monto válido"
+
+# el máximo que entra sí se acepta
+POST {{host}}/suscripciones
+Content-Type: application/json
+{
+  "id_servicio": {{servicio_id}},
+  "monto": "99999999.99",
+  "fecha_inicio": "2026-01-01T00:00:00Z",
+  "fecha_vencimiento": "2026-12-31T00:00:00Z",
+  "usuario_cuenta": "maximo@test.com"
+}
+HTTP 201
+[Captures]
+sub_maxima_id: jsonpath "$.id_suscripcion"
+[Asserts]
+jsonpath "$.monto" == "99999999.99"
+
+DELETE {{host}}/suscripciones/{{sub_maxima_id}}
+HTTP 204
 
 
 # ---------- 7. Monto no numerico (400) ----------
@@ -200,7 +233,7 @@ Content-Type: application/json
 }
 HTTP 400
 [Asserts]
-body contains "número válido"
+body contains "ingrese un monto válido"
 
 
 # ---------- 8. Inicio posterior al vencimiento (400) ----------

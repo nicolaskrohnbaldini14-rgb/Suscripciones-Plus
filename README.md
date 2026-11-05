@@ -433,14 +433,14 @@ registrar gimnasio, pádel, fútbol, etc.
 - **Servicios:** el catálogo viene precargado y es de solo lectura. Las categorías son `Streaming`, `Música`, `Software`, `Hogar`, `Seguros`, `Deportes`, `Salud`, `Financiero`, `Turismo` y `Otros`.
 - **Suscripciones:**
   - El usuario y el servicio tienen que existir.
-  - El monto tiene que ser mayor a cero y la fecha de inicio anterior a la de vencimiento.
+  - El monto tiene que ser mayor a cero y de hasta $ 99.999.999,99 (lo máximo que entra en la columna `DECIMAL(10,2)`; si no, se avisa "ingrese un monto válido") y la fecha de inicio anterior a la de vencimiento.
   - Se crean siempre en estado `Activa`; después se pueden pausar y reactivar (`Activa` y `Pausada` son los únicos estados que se pueden elegir). No hay estado `Cancelada`: para dejar una suscripción se la elimina.
   - **Renovación automática:** cuando una suscripción activa vence, se renueva sola por el mismo plazo con el que se registró (si era de un mes, por otro mes; si era de un año, por otro año). El período vencido queda como historial con estado `Vencida` y se crea uno nuevo con el mismo monto y la misma cuenta. Se hace al iniciar la app y cada vez que se piden las suscripciones de un usuario (`RenovarVencidas` en `logic/renovacion.go`), con una sola sentencia SQL atómica (`RenovarSuscripcion`). Las pausadas no se renuevan.
   - Las suscripciones `Vencida` y las que vencen en un mes anterior al actual son de **solo lectura**.
   - Usuario y contraseña de la cuenta del servicio son opcionales.
   - Un usuario puede tener **varias suscripciones al mismo servicio** si son cuentas distintas: desde la segunda (mientras la otra siga activa o pausada) hay que indicar el usuario de la cuenta, y no se puede repetir uno que ya esté en uso (sin distinguir mayúsculas). Esta regla está en `verificarCuentaDistinta`, en `logic/suscripcion.go`.
   - La `password_cuenta` nunca se devuelve en las respuestas.
-- **Pagos:** la suscripción tiene que existir, el monto tiene que ser mayor a cero y la fecha de pago no puede ser posterior al vencimiento de la suscripción.
+- **Pagos:** la suscripción tiene que existir, el monto tiene que ser mayor a cero y de hasta $ 99.999.999,99 y la fecha de pago no puede ser posterior al vencimiento de la suscripción.
 
 # Pruebas de los endpoints
 
