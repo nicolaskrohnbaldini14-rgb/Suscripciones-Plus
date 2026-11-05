@@ -154,7 +154,7 @@ Navegador ──(GET de páginas, POST de formularios + cookie de sesión)──
   - `sesiones.go`: la cookie de sesión.
 - **`logic/`** — reglas de negocio (validaciones, contraseñas con bcrypt,
   catálogo precargado, renovación automática, cuentas distintas, solo
-  lectura). Es la misma lógica del TP4, sin la parte HTTP.
+  lectura).
 - **`db/`** — esquema, queries y código generado por sqlc.
 
 
