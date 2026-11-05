@@ -42,7 +42,7 @@ make run-app
 Luego abrir <http://localhost:8080>. Para detener la aplicación: `Ctrl+C`.
 
 Al iniciar, la aplicación precarga el catálogo de servicios (ver
-[Catálogo de servicios](#catálogo-de-servicios)). Para probarla: registrarse,
+[Catálogo de servicios]). Para probarla: registrarse,
 tocar un servicio en **Servicios ▾** (o ir a *Nueva suscripción*), crear
 algunas suscripciones y verlas en *Mis suscripciones*.
 
