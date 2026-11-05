@@ -104,9 +104,36 @@ contraseñas se guardan hasheadas.
   tiempo, lo informa y borra los contenedores.
 
 ## Ejecutar pruebas (tests de sqlc + pruebas Hurl de la API)
+
+**Todas las pruebas juntas** (recomendado): levanta la base, genera el código,
+corre los tests de Go, levanta la app, la prueba con Hurl y al final borra los
+contenedores y volúmenes.
+
 ```bash
 make
 ```
+
+**Solo los tests de Go** (`main_test.go` y `logic/`): `make test` necesita la
+base levantada y el código de sqlc generado, porque `main_test.go` prueba las
+consultas contra PostgreSQL. Si se corre solo, falla con *"Base de datos
+inalcanzable"* (`make: *** [test] Error 1`). Los pasos son:
+
+```bash
+make generate
+```
+(levanta PostgreSQL esperando el healthcheck y corre `sqlc generate`)
+
+```bash
+make test
+```
+
+```bash
+make docker-down
+```
+(borra los contenedores y volúmenes)
+
+Los tests vacían las tablas al empezar, así que no conviene correrlos mientras
+la app está en uso con datos que se quieran conservar.
 
 # Frontend (TP4)
 
