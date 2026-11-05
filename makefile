@@ -1,7 +1,7 @@
 APP_NAME := Tp5-Krohn-Trapani-Cicopiedi
 HOST := http://localhost:8080
-HURL_FILES := hurl/publico.hurl hurl/cuentas.hurl hurl/suscripcion.hurl hurl/datos_de_prueba.hurl
-# segundos máximos que se espera a que la aplicación responda
+HURL_FILES := hurl/publico.hurl hurl/cuentas.hurl hurl/suscripcion.hurl hurl/datos_de_prueba.hurl hurl/salud.hurl
+# segundos máximos que se espera a que la aplicación esté lista (GET /salud/lista)
 ESPERA_APP := 60
 
 # Si sqlc no está instalado se compila y ejecuta con "go run"
@@ -79,14 +79,14 @@ test-api: build docker-up
 	@$(MAKE) --no-print-directory test || { $(MAKE) --no-print-directory docker-down; exit 1; }
 	@echo "==> Levantando la aplicación..."
 	@./tmp/$(APP_NAME) & APP_PID=$$! ; \
-	echo "==> Esperando a que la aplicación responda (hasta $(ESPERA_APP) s)..." ; \
+	echo "==> Esperando el health check de la aplicación (hasta $(ESPERA_APP) s)..." ; \
 	ESPERA=0 ; \
-	until curl -s -o /dev/null $(HOST)/ ; do \
+	until curl -sf -o /dev/null $(HOST)/salud/lista ; do \
 		if ! kill -0 $$APP_PID 2>/dev/null ; then \
 			echo "La aplicación terminó antes de responder" ; $(MAKE) --no-print-directory docker-down ; exit 1 ; \
 		fi ; \
 		if [ $$ESPERA -ge $(ESPERA_APP) ] ; then \
-			echo "La aplicación no respondió en $(ESPERA_APP) s" ; kill $$APP_PID ; $(MAKE) --no-print-directory docker-down ; exit 1 ; \
+			echo "La aplicación no quedó lista en $(ESPERA_APP) s" ; kill $$APP_PID ; $(MAKE) --no-print-directory docker-down ; exit 1 ; \
 		fi ; \
 		ESPERA=$$((ESPERA + 1)) ; sleep 1 ; \
 	done ; \

@@ -63,6 +63,9 @@ func main() {
 	mux := http.NewServeMux()
 	handlers.NuevoWeb(queries, handlers.NuevasSesiones()).Registrar(mux)
 
+	// health check de la aplicación: GET /salud/vivo y /salud/lista (salud.go)
+	registrarSalud(mux, dbConn)
+
 	// 5. Servidor HTTP
 	log.Println("Servidor escuchando en http://localhost:8080")
 	if err := http.ListenAndServe(":8080", mux); err != nil {
