@@ -16,15 +16,19 @@ type FormSuscripcion struct {
 	UsuarioCuenta    string
 }
 
-templ NuevaSuscripcionPage(p Pagina, form FormSuscripcion) {
-	@Layout(p, contenidoNuevaSuscripcion(p.Servicios, form))
+templ NuevaSuscripcionPage(p Pagina, form FormSuscripcion, activas Activas) {
+	@Layout(p, contenidoNuevaSuscripcion(p.Servicios, form, activas))
 }
 
-templ contenidoNuevaSuscripcion(servicios []sqlc.Servicio, form FormSuscripcion) {
+// contenidoNuevaSuscripcion: el formulario y, debajo, las suscripciones
+// activas. TP6: al crear una suscripción, HTMX reemplaza solo la lista
+// (#panel-activas) y vacía el formulario, sin recargar la página.
+templ contenidoNuevaSuscripcion(servicios []sqlc.Servicio, form FormSuscripcion, activas Activas) {
 	<h1>Nueva suscripción</h1>
 	<section class="panel">
 		@SuscripcionForm(servicios, form)
 	</section>
+	@PanelActivas(activas)
 	<p><a href="/cuenta/suscripciones">← Volver a mis suscripciones</a></p>
 }
 
@@ -32,13 +36,41 @@ templ contenidoNuevaSuscripcion(servicios []sqlc.Servicio, form FormSuscripcion)
 // botones del catálogo lo usan para elegir el servicio sin perder lo escrito
 const IDFormularioSuscripcion = "form-suscripcion"
 
+// IDPanelActivas es el id de la lista de suscripciones activas: el destino
+// (hx-target) del formulario de nueva suscripción
+const IDPanelActivas = "panel-activas"
+
 // SuscripcionForm crea una suscripción para el usuario que inició sesión
 // (el usuario sale de la sesión y el estado inicial es siempre Activa)
 templ SuscripcionForm(servicios []sqlc.Servicio, form FormSuscripcion) {
+	@suscripcionForm(servicios, form, false)
+}
+
+// SuscripcionFormOOB es el formulario (vacío) que acompaña a la lista en la
+// respuesta de POST /cuenta/suscripciones: con hx-swap-oob="true" HTMX
+// reemplaza el formulario que tiene el mismo id y así quedan limpios los
+// campos después de crear la suscripción (TP6, ejercicio 3).
+templ SuscripcionFormOOB(servicios []sqlc.Servicio, form FormSuscripcion) {
+	@suscripcionForm(servicios, form, true)
+}
+
+// suscripcionForm: con HTMX, el formulario se envía por AJAX (hx-post) y la
+// respuesta (la lista actualizada) reemplaza entera (outerHTML) a
+// #panel-activas. method y action quedan como respaldo sin JavaScript.
+templ suscripcionForm(servicios []sqlc.Servicio, form FormSuscripcion, oob bool) {
 	if len(servicios) == 0 {
 		<p class="vacio">Todavía no hay servicios disponibles.</p>
 	} else {
-		<form id={ IDFormularioSuscripcion } method="post" action="/cuenta/suscripciones" class="formulario formulario-grilla">
+		<form
+			id={ IDFormularioSuscripcion }
+			method="post"
+			action="/cuenta/suscripciones"
+			hx-post="/cuenta/suscripciones"
+			hx-target={ "#" + IDPanelActivas }
+			hx-swap="outerHTML"
+			class="formulario formulario-grilla"
+			{ fueraDeBanda(oob)... }
+		>
 			// botón por defecto (invisible): Enter en un campo crea la suscripción,
 			// no abre el catálogo, que es el primer botón del formulario
 			<button type="submit" class="boton-por-defecto" tabindex="-1" aria-hidden="true">Crear suscripción</button>
@@ -98,4 +130,21 @@ func nombreServicio(servicios []sqlc.Servicio, id int32) string {
 		}
 	}
 	return ""
+}
+
+// RespuestaSuscripcionCreada es lo que devuelve POST /cuenta/suscripciones
+// cuando se crea la suscripción: la lista de activas actualizada (el destino
+// del hx-target) y, fuera de banda, el formulario vacío y el aviso.
+templ RespuestaSuscripcionCreada(servicios []sqlc.Servicio, activas Activas, aviso Aviso) {
+	@PanelActivas(activas)
+	@SuscripcionFormOOB(servicios, FormSuscripcion{})
+	@Avisos(aviso, true)
+}
+
+// RespuestaErrorSuscripcion es la respuesta de HTMX cuando no se puede crear
+// la suscripción: el formulario con lo que se escribió (el servidor cambia el
+// destino con HX-Retarget) y, fuera de banda, el aviso con el error.
+templ RespuestaErrorSuscripcion(servicios []sqlc.Servicio, form FormSuscripcion, aviso Aviso) {
+	@SuscripcionForm(servicios, form)
+	@Avisos(aviso, true)
 }

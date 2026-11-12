@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -21,7 +20,6 @@ type opcionesLista struct {
 	Busqueda         string
 	Ver              int32
 	Editar           bool
-	Eliminar         bool // ?eliminar=1: pedir confirmación antes de borrar
 	Aviso            views.Aviso
 	FormEditar       *views.FormModificar
 	ErrorEditar      string
@@ -37,7 +35,6 @@ func (h *Web) misSuscripciones(w http.ResponseWriter, r *http.Request, usr sqlc.
 		Busqueda: strings.TrimSpace(q.Get("q")),
 		Ver:      leerEntero(q.Get("ver")),
 		Editar:   q.Get("editar") == "1",
-		Eliminar: q.Get("eliminar") == "1",
 		Aviso:    avisoDeLaURL(r),
 	})
 }
@@ -51,7 +48,41 @@ func (h *Web) renderSuscripciones(w http.ResponseWriter, r *http.Request, usr sq
 		errorInterno(w, err)
 		return
 	}
+	d := datosDelMes(todas, op)
 
+	// detalle de una suscripción del usuario (puede ser de cualquier mes)
+	if op.Ver > 0 {
+		for _, s := range todas {
+			if s.IDSuscripcion != op.Ver {
+				continue
+			}
+			det := &views.Detalle{
+				Sub:              s,
+				Editable:         d.Editables[s.IDSuscripcion],
+				PasswordRevelada: op.PasswordRevelada,
+				Password:         op.Password,
+				ErrorPassword:    op.ErrorPassword,
+				ErrorEditar:      op.ErrorEditar,
+			}
+			det.Editando = det.Editable && (op.Editar || op.FormEditar != nil)
+			if op.FormEditar != nil {
+				det.Form = *op.FormEditar
+			} else {
+				det.Form = views.FormModificar{Monto: s.Monto, UsuarioCuenta: valor(s.UsuarioCuenta), Estado: s.Estado}
+			}
+			d.Detalle = det
+		}
+	}
+
+	p := h.pagina(r, "Mis suscripciones", "suscripciones", &usr)
+	p.Aviso = op.Aviso
+	render(w, r, estado, views.MisSuscripcionesPage(p, d))
+}
+
+// datosDelMes arma la lista, el gasto y el calendario del mes elegido (sin
+// el detalle). También la usa el DELETE para actualizar el gasto y el
+// calendario después de borrar.
+func datosDelMes(todas []views.Fila, op opcionesLista) views.DatosSuscripciones {
 	delMes := filtrarPorMes(todas, op.Mes)
 	sort.SliceStable(delMes, func(i, j int) bool {
 		return delMes[i].FechaVencimiento.Before(delMes[j].FechaVencimiento)
@@ -82,35 +113,48 @@ func (h *Web) renderSuscripciones(w http.ResponseWriter, r *http.Request, usr sq
 	for _, s := range todas {
 		d.Editables[s.IDSuscripcion] = views.EsEditable(s)
 	}
+	return d
+}
 
-	// detalle de una suscripción del usuario (puede ser de cualquier mes)
-	if op.Ver > 0 {
-		for _, s := range todas {
-			if s.IDSuscripcion != op.Ver {
-				continue
-			}
-			det := &views.Detalle{
-				Sub:              s,
-				Editable:         d.Editables[s.IDSuscripcion],
-				PasswordRevelada: op.PasswordRevelada,
-				Password:         op.Password,
-				ErrorPassword:    op.ErrorPassword,
-				ErrorEditar:      op.ErrorEditar,
-			}
-			det.Editando = det.Editable && (op.Editar || op.FormEditar != nil)
-			det.Eliminando = det.Editable && op.Eliminar && !det.Editando
-			if op.FormEditar != nil {
-				det.Form = *op.FormEditar
-			} else {
-				det.Form = views.FormModificar{Monto: s.Monto, UsuarioCuenta: valor(s.UsuarioCuenta), Estado: s.Estado}
-			}
-			d.Detalle = det
+// activasDe devuelve todas las suscripciones activas (de cualquier mes),
+// ordenadas por vencimiento: el panel de "Mi cuenta" y de "Nueva suscripción"
+func activasDe(todas []views.Fila) views.Activas {
+	var activas []views.Fila
+	for _, s := range todas {
+		if s.Estado == "Activa" {
+			activas = append(activas, s)
 		}
 	}
+	sort.SliceStable(activas, func(i, j int) bool {
+		return activas[i].FechaVencimiento.Before(activas[j].FechaVencimiento)
+	})
+	return views.Activas{Lista: activas}
+}
 
-	p := h.pagina(r, "Mis suscripciones", "suscripciones", &usr)
-	p.Aviso = op.Aviso
-	render(w, r, estado, views.MisSuscripcionesPage(p, d))
+// renderNueva dibuja la página "Nueva suscripción" completa (formulario y
+// suscripciones activas). Si el pedido es de HTMX (el botón del catálogo
+// está dentro del formulario, que se envía por AJAX), la página reemplaza al
+// <body> entero: es lo mismo que haría el navegador sin HTMX.
+func (h *Web) renderNueva(w http.ResponseWriter, r *http.Request, usr sqlc.Usuario, estado int, p views.Pagina, form views.FormSuscripcion) {
+	todas, err := h.suscripciones.ListarPorUsuario(r.Context(), usr.IDUsuario)
+	if err != nil {
+		errorInterno(w, err)
+		return
+	}
+	estado = cambiarDestinoHTMX(w, r, estado, "body", "innerHTML")
+	render(w, r, estado, views.NuevaSuscripcionPage(p, form, activasDe(todas)))
+}
+
+// leerFormSuscripcion lee el formulario de nueva suscripción (la contraseña
+// de la cuenta no se guarda en el formulario: no se vuelve a mostrar)
+func leerFormSuscripcion(r *http.Request) views.FormSuscripcion {
+	return views.FormSuscripcion{
+		IDServicio:       leerEntero(r.FormValue("id_servicio")),
+		Monto:            strings.TrimSpace(r.FormValue("monto")),
+		FechaInicio:      r.FormValue("fecha_inicio"),
+		FechaVencimiento: r.FormValue("fecha_vencimiento"),
+		UsuarioCuenta:    strings.TrimSpace(r.FormValue("usuario_cuenta")),
+	}
 }
 
 func (h *Web) nuevaSuscripcion(w http.ResponseWriter, r *http.Request, usr sqlc.Usuario) {
@@ -127,7 +171,7 @@ func (h *Web) nuevaSuscripcion(w http.ResponseWriter, r *http.Request, usr sqlc.
 			CerrarURL: "/cuenta/suscripciones/nueva?servicio=" + strconv.Itoa(int(form.IDServicio)),
 		}
 	}
-	render(w, r, http.StatusOK, views.NuevaSuscripcionPage(p, form))
+	h.renderNueva(w, r, usr, http.StatusOK, p, form)
 }
 
 // elegirServicio abre o cierra el catálogo grande para elegir el servicio de
@@ -140,13 +184,7 @@ func (h *Web) elegirServicio(w http.ResponseWriter, r *http.Request, usr sqlc.Us
 	if !parsearFormulario(w, r) {
 		return
 	}
-	form := views.FormSuscripcion{
-		IDServicio:       leerEntero(r.FormValue("id_servicio")),
-		Monto:            strings.TrimSpace(r.FormValue("monto")),
-		FechaInicio:      r.FormValue("fecha_inicio"),
-		FechaVencimiento: r.FormValue("fecha_vencimiento"),
-		UsuarioCuenta:    strings.TrimSpace(r.FormValue("usuario_cuenta")),
-	}
+	form := leerFormSuscripcion(r)
 
 	p := h.pagina(r, "Nueva suscripción", "nueva-suscripcion", &usr)
 	if elegido := r.FormValue("elegir_servicio"); elegido != "" {
@@ -159,34 +197,28 @@ func (h *Web) elegirServicio(w http.ResponseWriter, r *http.Request, usr sqlc.Us
 			Formulario: views.IDFormularioSuscripcion,
 		}
 	}
-	render(w, r, http.StatusOK, views.NuevaSuscripcionPage(p, form))
+	h.renderNueva(w, r, usr, http.StatusOK, p, form)
 }
 
 // crearSuscripcion guarda la suscripción a nombre del usuario de la sesión
-// (siempre Activa) y redirige al mes en que vence (Post/Redirect/Get)
+// (siempre Activa). TP6: ya no redirige. Devuelve solo la lista de
+// suscripciones activas actualizada, que HTMX pone en #panel-activas, y
+// fuera de banda el formulario vacío y el aviso "Suscripción creada".
 func (h *Web) crearSuscripcion(w http.ResponseWriter, r *http.Request, usr sqlc.Usuario) {
 	if !parsearFormulario(w, r) {
 		return
 	}
-	form := views.FormSuscripcion{
-		IDServicio:       leerEntero(r.FormValue("id_servicio")),
-		Monto:            strings.TrimSpace(r.FormValue("monto")),
-		FechaInicio:      r.FormValue("fecha_inicio"),
-		FechaVencimiento: r.FormValue("fecha_vencimiento"),
-		UsuarioCuenta:    strings.TrimSpace(r.FormValue("usuario_cuenta")),
-	}
+	form := leerFormSuscripcion(r)
 
 	// el servicio ya no es un <select> con "required": si no se eligió, se avisa
 	if form.IDServicio == 0 {
-		p := h.pagina(r, "Nueva suscripción", "nueva-suscripcion", &usr)
-		p.Aviso = avisoError("Elegí un servicio del catálogo.")
-		render(w, r, http.StatusBadRequest, views.NuevaSuscripcionPage(p, form))
+		h.errorAlCrear(w, r, usr, form, http.StatusBadRequest, "Elegí un servicio del catálogo.")
 		return
 	}
 
 	// los valores inválidos quedan en cero y los rechaza la capa de lógica;
 	// usuario y contraseña vacíos quedan en NULL
-	nueva, err := h.suscripciones.Crear(r.Context(), sqlc.CreateSubscripcionParams{
+	_, err := h.suscripciones.Crear(r.Context(), sqlc.CreateSubscripcionParams{
 		IDUsuario:        usr.IDUsuario,
 		IDServicio:       form.IDServicio,
 		Monto:            form.Monto,
@@ -197,17 +229,37 @@ func (h *Web) crearSuscripcion(w http.ResponseWriter, r *http.Request, usr sqlc.
 	})
 	if err != nil {
 		estado, mensaje := describirError(err)
-		p := h.pagina(r, "Nueva suscripción", "nueva-suscripcion", &usr)
-		p.Aviso = avisoError(mensaje)
-		render(w, r, estado, views.NuevaSuscripcionPage(p, form))
+		h.errorAlCrear(w, r, usr, form, estado, mensaje)
 		return
 	}
 
-	destino := "/cuenta/suscripciones?" + url.Values{
-		"mes": {nueva.FechaVencimiento.Format("2006-01")},
-		"ok":  {"creada"},
-	}.Encode()
-	http.Redirect(w, r, destino, http.StatusSeeOther)
+	// se vuelve a consultar la lista completa (ya con la nueva suscripción)
+	todas, err := h.suscripciones.ListarPorUsuario(r.Context(), usr.IDUsuario)
+	if err != nil {
+		errorInterno(w, err)
+		return
+	}
+	servicios, err := h.servicios.Listar(r.Context())
+	if err != nil {
+		errorInterno(w, err)
+		return
+	}
+	render(w, r, http.StatusOK, views.RespuestaSuscripcionCreada(servicios, activasDe(todas), views.Aviso{Texto: avisosOK["creada"]}))
+}
+
+// errorAlCrear muestra por qué no se pudo crear la suscripción, sin perder
+// lo que se escribió. Con HTMX se devuelve solo el formulario (reemplaza al
+// que está en la página) y el aviso con el error (fuera de banda). Sin HTMX
+// se dibuja la página completa con el código de error, como antes.
+func (h *Web) errorAlCrear(w http.ResponseWriter, r *http.Request, usr sqlc.Usuario, form views.FormSuscripcion, estado int, mensaje string) {
+	p := h.pagina(r, "Nueva suscripción", "nueva-suscripcion", &usr)
+	p.Aviso = avisoError(mensaje)
+	if !esHTMX(r) {
+		h.renderNueva(w, r, usr, estado, p, form)
+		return
+	}
+	estado = cambiarDestinoHTMX(w, r, estado, "#"+views.IDFormularioSuscripcion, "outerHTML")
+	render(w, r, estado, views.RespuestaErrorSuscripcion(p.Servicios, form, p.Aviso))
 }
 
 // suscripcionDelUsuario lee el id de la ruta y verifica que la suscripción
@@ -314,20 +366,51 @@ func (h *Web) revelarPassword(w http.ResponseWriter, r *http.Request, usr sqlc.U
 	h.renderSuscripciones(w, r, usr, http.StatusOK, op)
 }
 
+// eliminar maneja DELETE /cuenta/suscripciones/{id} (TP6): borra la
+// suscripción y responde 200 con el contenido principal vacío, así HTMX
+// reemplaza la fila (hx-target="closest li") por nada y desaparece de la
+// lista. Fuera de banda se actualizan el gasto del mes, el calendario y el
+// aviso. Si la lista del mes queda vacía se reemplaza la lista entera, para
+// mostrar el mensaje de lista vacía.
 func (h *Web) eliminar(w http.ResponseWriter, r *http.Request, usr sqlc.Usuario) {
-	if !parsearFormulario(w, r) {
+	q := r.URL.Query()
+	op := opcionesLista{Mes: mesValido(q.Get("mes")), Busqueda: strings.TrimSpace(q.Get("q"))}
+
+	id := leerEntero(r.PathValue("id"))
+	propia, err := h.suscripciones.PerteneceA(r.Context(), id, usr.IDUsuario)
+	if err != nil {
+		errorInterno(w, err)
 		return
 	}
-	op := opcionesDelFormulario(r)
-	sub, ok := h.suscripcionDelUsuario(w, r, usr, op)
-	if !ok {
+	if !propia {
+		errorAlEliminar(w, r, http.StatusNotFound, "Suscripción no encontrada.")
 		return
 	}
-	if err := h.suscripciones.Eliminar(r.Context(), sub.IDSuscripcion); err != nil {
+	// la lógica rechaza las de solo lectura (vencidas o de un mes anterior)
+	if err := h.suscripciones.Eliminar(r.Context(), id); err != nil {
 		estado, mensaje := describirError(err)
-		op.Aviso = avisoError(mensaje)
-		h.renderSuscripciones(w, r, usr, estado, op)
+		errorAlEliminar(w, r, estado, mensaje)
 		return
 	}
-	redirigirALista(w, r, op, 0, "eliminada")
+
+	todas, err := h.suscripciones.ListarPorUsuario(r.Context(), usr.IDUsuario)
+	if err != nil {
+		errorInterno(w, err)
+		return
+	}
+	d := datosDelMes(todas, op)
+	aviso := views.Aviso{Texto: avisosOK["eliminada"]}
+	if len(d.Suscripciones) == 0 {
+		w.Header().Set("HX-Retarget", "#lista-suscripciones")
+		w.Header().Set("HX-Reswap", "outerHTML")
+		render(w, r, http.StatusOK, views.RespuestaListaVacia(d, aviso))
+		return
+	}
+	render(w, r, http.StatusOK, views.RespuestaSuscripcionEliminada(d, aviso))
+}
+
+// errorAlEliminar: la fila no se toca y el error se muestra en el aviso
+func errorAlEliminar(w http.ResponseWriter, r *http.Request, estado int, mensaje string) {
+	estado = cambiarDestinoHTMX(w, r, estado, "#avisos", "outerHTML")
+	render(w, r, estado, views.Avisos(avisoError(mensaje), false))
 }

@@ -25,12 +25,7 @@ templ contenidoMisSuscripciones(d DatosSuscripciones) {
 			if d.SoloLectura {
 				<p class="aviso-lectura">Estás viendo un mes anterior: estas suscripciones son solo de lectura.</p>
 			}
-			// en un mes anterior es todo lo que venció; en el actual, lo que falta pagar
-			if d.SoloLectura {
-				<p class="total">Gasto mensual: { d.Total }</p>
-			} else {
-				<p class="total">Gasto mensual (activo): { d.Total }</p>
-			}
+			@TotalMes(d, false)
 			if d.HayEnElMes {
 				<form method="get" action="/cuenta/suscripciones" class="buscador-form">
 					<input type="hidden" name="mes" value={ d.Mes }/>
@@ -44,38 +39,71 @@ templ contenidoMisSuscripciones(d DatosSuscripciones) {
 					}
 				</form>
 			}
-			<ul id="lista-suscripciones" class="lista">
-				if !d.HayAlguna {
-					@VacioLista("Todavía no registraste ninguna suscripción.")
-				} else if !d.HayEnElMes {
-					@VacioLista("No tenés suscripciones que venzan en " + d.NombreMes + ".")
-				} else if len(d.Suscripciones) == 0 {
-					@VacioLista("Ninguna suscripción de " + d.NombreMes + " coincide con \"" + d.Busqueda + "\".")
-				} else {
-					for _, s := range d.Suscripciones {
-						@ItemSuscripcion(d, s)
-					}
-				}
-			</ul>
+			@ListaSuscripciones(d)
 			<nav class="navegacion-meses" aria-label="Otros meses">
 				<a href={ templ.URL(UrlSuscripciones(d.MesAnterior, "", 0, false)) }>← { d.NombreAnterior }</a>
 				<a id="mes-siguiente" href={ templ.URL(UrlSuscripciones(d.MesSiguiente, "", 0, false)) }>Ver los vencimientos de { d.NombreSiguiente } →</a>
 			</nav>
 		</section>
-		@Calendario(d)
+		@Calendario(d, false)
 	</div>
 	if d.Detalle != nil {
-		if d.Detalle.Eliminando {
-			@ConfirmarEliminar(d, *d.Detalle)
-		} else {
-			@DetalleSuscripcion(d, *d.Detalle)
-		}
+		@DetalleSuscripcion(d, *d.Detalle)
 	}
+}
+
+// TotalMes: en un mes anterior es todo lo que venció; en el actual, lo que
+// falta pagar. Tiene id para actualizarlo (oob) después de borrar.
+templ TotalMes(d DatosSuscripciones, oob bool) {
+	<p id="total-mes" class="total" { fueraDeBanda(oob)... }>
+		if d.SoloLectura {
+			Gasto mensual: { d.Total }
+		} else {
+			Gasto mensual (activo): { d.Total }
+		}
+	</p>
+}
+
+// ListaSuscripciones son las suscripciones del mes que coinciden con la búsqueda
+templ ListaSuscripciones(d DatosSuscripciones) {
+	<ul id="lista-suscripciones" class="lista">
+		if !d.HayAlguna {
+			@VacioLista("Todavía no registraste ninguna suscripción.")
+		} else if !d.HayEnElMes {
+			@VacioLista("No tenés suscripciones que venzan en " + d.NombreMes + ".")
+		} else if len(d.Suscripciones) == 0 {
+			@VacioLista("Ninguna suscripción de " + d.NombreMes + " coincide con \"" + d.Busqueda + "\".")
+		} else {
+			for _, s := range d.Suscripciones {
+				@ItemSuscripcion(d, s)
+			}
+		}
+	</ul>
+}
+
+// RespuestaSuscripcionEliminada es lo que devuelve DELETE
+// /cuenta/suscripciones/{id}. El contenido principal está vacío: HTMX
+// reemplaza la fila (hx-target="closest li") por nada y la fila desaparece.
+// Fuera de banda (hx-swap-oob) se actualizan el gasto del mes, el calendario
+// y el aviso, que dejaron de estar al día.
+templ RespuestaSuscripcionEliminada(d DatosSuscripciones, aviso Aviso) {
+	@TotalMes(d, true)
+	@Calendario(d, true)
+	@Avisos(aviso, true)
+}
+
+// RespuestaListaVacia: se borró la última suscripción de la lista; el
+// servidor cambia el destino (HX-Retarget) a la lista entera
+templ RespuestaListaVacia(d DatosSuscripciones, aviso Aviso) {
+	@ListaSuscripciones(d)
+	@TotalMes(d, true)
+	@Calendario(d, true)
+	@Avisos(aviso, true)
 }
 
 // ItemSuscripcion: logo y datos (link al detalle), el estado y, si es
 // editable, "Modificar" (monto, cuenta y estado) y "Eliminar" (pide
-// confirmación antes de borrar), en ese orden
+// confirmación y borra con HTMX), en ese orden
 templ ItemSuscripcion(d DatosSuscripciones, s Fila) {
 	<li class={ "item", templ.KV("item-solo-lectura", !d.Editables[s.IDSuscripcion]) }>
 		<a class="item-enlace" href={ templ.URL(UrlSuscripciones(d.Mes, d.Busqueda, s.IDSuscripcion, false)) } aria-label={ "Ver detalles de " + s.ServicioNombre }>
@@ -88,7 +116,18 @@ templ ItemSuscripcion(d DatosSuscripciones, s Fila) {
 		if d.Editables[s.IDSuscripcion] {
 			<span class="estado-fijo">{ textoEstado(s.Estado) }</span>
 			<a class="btn-modificar" href={ templ.URL(UrlSuscripciones(d.Mes, d.Busqueda, s.IDSuscripcion, true)) }>Modificar</a>
-			<a class="btn-eliminar" href={ templ.URL(UrlEliminar(d.Mes, d.Busqueda, s.IDSuscripcion)) }>Eliminar</a>
+			// TP6: borra sin recargar la página. HTMX pide confirmación
+			// (hx-confirm), envía DELETE /cuenta/suscripciones/{id} y reemplaza
+			// la fila entera (closest li, outerHTML) por la respuesta vacía.
+			// El mes y la búsqueda viajan para recalcular el gasto y el calendario.
+			<button
+				type="button"
+				class="btn-eliminar"
+				hx-delete={ UrlBorrar(d.Mes, d.Busqueda, s.IDSuscripcion) }
+				hx-target="closest li"
+				hx-swap="outerHTML"
+				hx-confirm={ "¿Seguro que querés eliminar la suscripción a " + s.ServicioNombre + "? No se puede deshacer." }
+			>Eliminar</button>
 		} else {
 			<span class="estado-fijo">{ textoEstado(s.Estado) }</span>
 		}
@@ -97,8 +136,8 @@ templ ItemSuscripcion(d DatosSuscripciones, s Fila) {
 
 // Calendario del mes con un pin en cada día de vencimiento; el cartel con
 // los servicios aparece al pasar el cursor (CSS)
-templ Calendario(d DatosSuscripciones) {
-	<aside class="panel calendario" aria-label="Calendario de vencimientos">
+templ Calendario(d DatosSuscripciones, oob bool) {
+	<aside id="panel-calendario" class="panel calendario" aria-label="Calendario de vencimientos" { fueraDeBanda(oob)... }>
 		<h2>{ mayusculaInicial(d.NombreMes) }</h2>
 		<div id="calendario" class="calendario-grilla">
 			for _, inicial := range []string{"L", "M", "M", "J", "V", "S", "D"} {
@@ -135,23 +174,6 @@ templ Calendario(d DatosSuscripciones) {
 }
 
 // DetalleSuscripcion se dibuja sobre la lista desenfocada. El fondo y la ×
-// ConfirmarEliminar pide confirmación antes de eliminar una suscripción, en
-// el mismo aviso negro de los mensajes (fijo arriba de la pantalla): el
-// borrado es un POST que no se puede deshacer
-templ ConfirmarEliminar(d DatosSuscripciones, det Detalle) {
-	<div class="mensaje error mensaje-confirmar" role="alertdialog" aria-labelledby="confirmar-texto">
-		<span id="confirmar-texto">¿Seguro que querés eliminar la suscripción a { det.Sub.ServicioNombre }? No se puede deshacer.</span>
-		<span class="mensaje-acciones">
-			<a class="boton-secundario boton-chico" href={ templ.URL(UrlSuscripciones(d.Mes, d.Busqueda, 0, false)) }>Cancelar</a>
-			<form method="post" action={ templ.URL(fmt.Sprintf("/cuenta/suscripciones/%d/eliminar", det.Sub.IDSuscripcion)) } class="form-eliminar">
-				<input type="hidden" name="mes" value={ d.Mes }/>
-				<input type="hidden" name="q" value={ d.Busqueda }/>
-				<button type="submit" class="btn-confirmar-aviso boton-chico">Sí, eliminar</button>
-			</form>
-		</span>
-	</div>
-}
-
 // son links que vuelven a la lista (sin JavaScript).
 templ DetalleSuscripcion(d DatosSuscripciones, det Detalle) {
 	<div class="detalle-fondo">

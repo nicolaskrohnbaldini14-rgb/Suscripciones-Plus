@@ -8,7 +8,9 @@ import (
 )
 
 // Web reúne los handlers que renderizan HTML con templ. Reemplazan a los
-// handlers JSON del TP4: la vista se genera en el servidor y no hay JavaScript.
+// handlers JSON del TP4: la vista se genera en el servidor. Desde el TP6,
+// crear y eliminar suscripciones usan HTMX: devuelven fragmentos de HTML que
+// HTMX pone en la página sin recargarla (no escribimos JavaScript propio).
 //
 // Las rutas están todas en Registrar. Los handlers se separan por entidad
 // (usuarios.go y suscripciones.go) y lo que comparten está en comunes.go
@@ -52,7 +54,8 @@ func (h *Web) Registrar(mux *http.ServeMux) {
 	mux.HandleFunc("POST /cuenta/suscripciones", h.conSesion(h.crearSuscripcion))
 	mux.HandleFunc("POST /cuenta/suscripciones/{id}/modificar", h.conSesion(h.modificar))
 	mux.HandleFunc("POST /cuenta/suscripciones/{id}/password", h.conSesion(h.revelarPassword))
-	mux.HandleFunc("POST /cuenta/suscripciones/{id}/eliminar", h.conSesion(h.eliminar))
+	// TP6: borrado con HTMX (hx-delete), sin recargar la página
+	mux.HandleFunc("DELETE /cuenta/suscripciones/{id}", h.conSesion(h.eliminar))
 
 	// "no-cache": el navegador siempre consulta si hay una versión nueva del CSS
 	estaticos := http.StripPrefix("/static/", http.FileServer(http.Dir("./static")))

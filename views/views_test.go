@@ -62,9 +62,14 @@ func TestHomePage_SinSesion(t *testing.T) {
 		"Streaming", "Música", "Deportes",
 		`class="icono-categoria"`,
 		"Netflix",
+		// TP6: el único script es HTMX, desde el CDN (no hay archivos .js propios)
+		`<script src="https://unpkg.com/htmx.org@1.9.10"></script>`,
 	)
+	if n := strings.Count(html, "<script"); n != 1 {
+		t.Errorf("la página tendría que tener un solo <script> (HTMX), tiene %d", n)
+	}
 	// sin sesión los servicios no son links para suscribirse
-	verificarNoContiene(t, html, "/cuenta/suscripciones/nueva?servicio=", "Cerrar sesión", "<script")
+	verificarNoContiene(t, html, "/cuenta/suscripciones/nueva?servicio=", "Cerrar sesión")
 }
 
 func TestHomePage_ConSesion(t *testing.T) {
@@ -131,8 +136,13 @@ func TestMisSuscripcionesPage_Editable(t *testing.T) {
 	verificarContiene(t, html,
 		"Gimnasio — $ 32.000,00",
 		`<span class="estado-fijo">Activa</span>`,
-		// "Eliminar" lleva a la confirmación (no borra directamente)
-		`href="/cuenta/suscripciones?mes=2026-10&amp;ver=5&amp;eliminar=1"`,
+		// TP6: "Eliminar" borra con HTMX: DELETE, la fila más cercana y confirmación
+		`hx-delete="/cuenta/suscripciones/5?mes=2026-10"`,
+		`hx-target="closest li"`,
+		`hx-swap="outerHTML"`,
+		`hx-confirm="¿Seguro que querés eliminar la suscripción a Gimnasio? No se puede deshacer."`,
+		// el layout carga HTMX
+		`<script src="https://unpkg.com/htmx.org@1.9.10"></script>`,
 		"Modificar",
 		`name="q"`,
 		"Gasto mensual (activo): $ 32.000,00",
@@ -140,7 +150,7 @@ func TestMisSuscripcionesPage_Editable(t *testing.T) {
 	)
 	// la lista no muestra la cuenta ni las fechas (están en el detalle) y el
 	// estado se cambia desde "Modificar", no desde la lista
-	verificarNoContiene(t, html, "martinagym", "<script", `name="estado"`, "Cancelada")
+	verificarNoContiene(t, html, "martinagym", `name="estado"`, "Cancelada")
 
 	// orden en cada suscripción: estado, Modificar y Eliminar
 	estado := strings.Index(html, `class="estado-fijo"`)
@@ -151,25 +161,47 @@ func TestMisSuscripcionesPage_Editable(t *testing.T) {
 	}
 }
 
-func TestConfirmarEliminar(t *testing.T) {
-	s := filaDePrueba()
+// la respuesta del DELETE no trae contenido principal (la fila desaparece):
+// solo el gasto, el calendario y el aviso, fuera de banda
+func TestRespuestaSuscripcionEliminada(t *testing.T) {
 	d := DatosSuscripciones{
 		Mes: "2026-10", NombreMes: "octubre de 2026", EsMesActual: true,
-		Suscripciones: []Fila{s}, HayEnElMes: true, HayAlguna: true,
-		Editables: map[int32]bool{5: true},
-		Detalle:   &Detalle{Sub: s, Editable: true, Eliminando: true},
+		HayAlguna: true, HayEnElMes: true, Total: "$ 0,00",
+		Calendario: ArmarCalendario("2026-10", nil, fecha(2026, 10, 29)),
 	}
-	html := renderizar(t, MisSuscripcionesPage(Pagina{Clave: "suscripciones", Sesion: &Sesion{Nombre: "Nico"}}, d))
+	html := renderizar(t, RespuestaSuscripcionEliminada(d, Aviso{Texto: "Suscripción eliminada."}))
 
 	verificarContiene(t, html,
-		// la pregunta va en el aviso negro, como los demás mensajes
-		`class="mensaje error mensaje-confirmar"`,
-		"¿Seguro que querés eliminar la suscripción a Gimnasio? No se puede deshacer.",
-		`action="/cuenta/suscripciones/5/eliminar"`,
-		"Sí, eliminar",
-		// Cancelar vuelve a la lista sin borrar
-		`<a class="boton-secundario boton-chico" href="/cuenta/suscripciones?mes=2026-10">Cancelar</a>`,
+		`<p id="total-mes" class="total" hx-swap-oob="true">`,
+		`<aside id="panel-calendario" class="panel calendario" aria-label="Calendario de vencimientos" hx-swap-oob="true">`,
+		`<div id="avisos" hx-swap-oob="true">`,
+		"Suscripción eliminada.",
 	)
+	if !strings.HasPrefix(strings.TrimSpace(html), `<p id="total-mes"`) {
+		t.Errorf("la respuesta no tendría que tener contenido antes de los fragmentos oob: %q", html[:60])
+	}
+	verificarNoContiene(t, html, "<li", "<html")
+}
+
+// la respuesta del POST: la lista de activas y el formulario vacío fuera de banda
+func TestRespuestaSuscripcionCreada(t *testing.T) {
+	html := renderizar(t, RespuestaSuscripcionCreada(catalogo, Activas{Lista: []Fila{filaDePrueba()}}, Aviso{Texto: "Suscripción creada."}))
+
+	verificarContiene(t, html,
+		`<section id="panel-activas"`,
+		"Gimnasio — $ 32.000,00",
+		`id="form-suscripcion"`,
+		`hx-swap-oob="true"`,
+		`hx-post="/cuenta/suscripciones"`,
+		`hx-target="#panel-activas"`,
+		"Suscripción creada.",
+	)
+	if !strings.HasPrefix(html, `<section id="panel-activas"`) {
+		t.Errorf("la respuesta tiene que empezar con la lista: %q", html[:60])
+	}
+	// formulario vacío: sin servicio elegido ni monto
+	verificarContiene(t, html, `<input type="hidden" name="id_servicio" value="0">`, `name="monto" value=""`)
+	verificarNoContiene(t, html, "<html")
 }
 
 func TestDetalle_ModificarConEstado(t *testing.T) {
@@ -212,13 +244,13 @@ func TestMisSuscripcionesPage_SoloLecturaYDetalle(t *testing.T) {
 		"gym2026!",
 		`class="detalle-fondo"`,
 	)
-	verificarNoContiene(t, html, `/estado"`, `/eliminar"`, `/modificar"`)
+	verificarNoContiene(t, html, `/estado"`, "hx-delete", `/modificar"`)
 }
 
 func TestNuevaSuscripcionPage(t *testing.T) {
 	p := Pagina{Clave: "nueva-suscripcion", Sesion: &Sesion{Nombre: "Nico"}, Servicios: catalogo,
 		Catalogo: Catalogo{Abierto: true, Elegir: true, IDActual: 3, CerrarURL: "/cuenta/suscripciones/nueva?servicio=3"}}
-	html := renderizar(t, NuevaSuscripcionPage(p, FormSuscripcion{IDServicio: 3, Monto: "15000"}))
+	html := renderizar(t, NuevaSuscripcionPage(p, FormSuscripcion{IDServicio: 3, Monto: "15000"}, Activas{}))
 
 	verificarContiene(t, html,
 		// el servicio va oculto y el botón muestra el elegido y abre el catálogo
@@ -230,13 +262,20 @@ func TestNuevaSuscripcionPage(t *testing.T) {
 		"panel-servicios abierto modo-elegir",
 		"panel-servicio elegido",
 	)
+	// TP6: el formulario se envía con HTMX y la respuesta reemplaza a la lista
+	verificarContiene(t, html,
+		`hx-post="/cuenta/suscripciones"`,
+		`hx-target="#panel-activas"`,
+		`hx-swap="outerHTML"`,
+		`<section id="panel-activas"`,
+	)
 	// ya no hay lista desplegable del navegador
 	verificarNoContiene(t, html, `<select name="id_servicio"`, "<optgroup")
 
 	// abierto desde el formulario: cada servicio es un botón que reenvía el
 	// formulario (para no perder lo escrito)
 	p.Catalogo.Formulario = IDFormularioSuscripcion
-	conFormulario := renderizar(t, NuevaSuscripcionPage(p, FormSuscripcion{IDServicio: 3, Monto: "15000"}))
+	conFormulario := renderizar(t, NuevaSuscripcionPage(p, FormSuscripcion{IDServicio: 3, Monto: "15000"}, Activas{}))
 	verificarContiene(t, conFormulario,
 		`form="form-suscripcion"`,
 		`name="elegir_servicio" value="3"`,

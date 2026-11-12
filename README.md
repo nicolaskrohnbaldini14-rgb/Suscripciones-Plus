@@ -1,6 +1,13 @@
-# Suscripciones+ · TP5
+# Suscripciones+ · TP6 (entrega final)
 Aplicación web en Go para registrar suscripciones y gastos recurrentes
 (streaming, música, software, deportes, salud, etc.).
+
+Las vistas se generan en el servidor con [templ](https://templ.guide) y, desde
+el TP6, la app usa [HTMX](https://htmx.org) para **crear y eliminar
+suscripciones sin recargar la página**: el servidor devuelve solo los
+fragmentos de HTML que cambian y HTMX los pone en su lugar. No escribimos
+JavaScript propio y el repositorio no tiene archivos `.js`: HTMX se carga
+desde el CDN en el `<head>` del layout.
 
 
 - **Inicio (`/`)**: portada centrada con los botones **Iniciar sesión** y
@@ -11,7 +18,11 @@ Aplicación web en Go para registrar suscripciones y gastos recurrentes
   opciones: **ver las suscripciones** o **crear una nueva**.
 - **Mis suscripciones**: las que vencen en el mes (por defecto el actual), con
   buscador, gasto del mes, calendario con los vencimientos, links al mes
-  anterior y al siguiente, y el detalle de cada una.
+  anterior y al siguiente, y el detalle de cada una. El botón **Eliminar**
+  pide confirmación y quita la fila sin recargar la página (HTMX).
+- **Nueva suscripción**: el formulario y, debajo, *Tus suscripciones activas*.
+  Al crear una, la lista se actualiza y el formulario se vacía sin recargar
+  la página (HTMX).
 
 # Requisitos previos
 
@@ -33,7 +44,7 @@ git clone https://github.com/nicolaskrohnbaldini14-rgb/Suscripciones-Plus.git
 cd Suscripciones-Plus
 ```
 ```bash
-git checkout tp5
+git checkout tp6
 ```
 ```bash
 make run-app
@@ -41,9 +52,14 @@ make run-app
 
 Luego abrir <http://localhost:8080>. Para detener la aplicación: `Ctrl+C`.
 
-Al iniciar, la aplicación precarga el catálogo de servicios. Para probarla: registrarse,
-tocar un servicio en **Servicios ▾** (o ir a *Nueva suscripción*), crear
-algunas suscripciones y verlas en *Mis suscripciones*.
+Al iniciar, la aplicación precarga el catálogo de servicios. Para probarla: registrarse
+(o entrar con un [usuario de prueba](#usuarios-de-prueba)), tocar un servicio en
+**Servicios ▾** (o ir a *Nueva suscripción*), crear algunas suscripciones (la
+lista de abajo se actualiza al instante) y verlas en *Mis suscripciones*, donde
+se pueden eliminar sin recargar la página.
+
+> Se necesita conexión a internet en el navegador para cargar HTMX desde
+> `unpkg.com`.
 
 `make run-app` realiza todas las tareas necesarias:
 
@@ -129,19 +145,93 @@ make docker-down
 Los tests vacían las tablas al empezar, así que no conviene correrlos mientras
 la app está en uso con datos que se quieran conservar.
 
+# Interfaces dinámicas con HTMX (TP6)
+
+HTMX 1.9.10 se incluye en `views/layout.templ`:
+
+```html
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+```
+
+## Crear una suscripción sin recargar la página
+
+- **Formulario** (`views/suscripcion_form.templ`, componente `SuscripcionForm`,
+  `id="form-suscripcion"`):
+  `hx-post="/cuenta/suscripciones"`, `hx-target="#panel-activas"` y
+  `hx-swap="outerHTML"`. `method` y `action` siguen como respaldo.
+- **Lista** (`views/cuenta.templ`, componente `PanelActivas`,
+  `id="panel-activas"`): las suscripciones activas. Está debajo del formulario
+  en *Nueva suscripción* (y también en *Mi cuenta*).
+- **Handler `POST /cuenta/suscripciones`** (`crearSuscripcion` en
+  `handlers/suscripciones.go`): **ya no redirige**. Crea la suscripción, vuelve
+  a consultar la lista y devuelve solo el fragmento `RespuestaSuscripcionCreada`:
+  1. `PanelActivas` actualizado: reemplaza a `#panel-activas` (el `hx-target`).
+  2. `SuscripcionFormOOB`: el formulario **vacío** con `hx-swap-oob="true"`.
+     HTMX reemplaza el formulario con el mismo id, así se limpian los campos
+     (*Out-of-Band Swap*).
+  3. El aviso *"Suscripción creada."*, también fuera de banda (`#avisos`).
+- **Errores** (servicio sin elegir, monto inválido, cuenta repetida…): HTMX
+  1.9 no reemplaza nada si la respuesta es 4xx/5xx. Por eso, cuando el pedido
+  viene de HTMX (encabezado `HX-Request`), el servidor responde 200 con el
+  formulario con lo que se escribió y el aviso de error, y cambia el destino
+  con `HX-Retarget: #form-suscripcion` y `HX-Reswap: outerHTML`. Sin HTMX
+  (por ejemplo, en las pruebas con Hurl) se mantiene el código de error (400,
+  409…) y la página completa.
+- **Catálogo**: el botón *Servicio* del formulario abre el catálogo grande
+  (`formaction="/cuenta/suscripciones/nueva/catalogo"`). Como el formulario se
+  envía con HTMX, ese handler responde con `HX-Retarget: body` y
+  `HX-Reswap: innerHTML`: se redibuja la página con el catálogo abierto sin
+  perder lo escrito.
+
+## Eliminar una suscripción sin recargar la página
+
+- **Consulta sqlc**: `DeleteSubscripcion` en `db/queries/queries.sql`
+  (`DELETE FROM suscripcion WHERE id_suscripcion = $1`).
+- **Botón** en cada fila de *Mis suscripciones* (`ItemSuscripcion` en
+  `views/suscripcion_list.templ`):
+  - `hx-delete="/cuenta/suscripciones/{id}?mes=AAAA-MM"`
+  - `hx-target="closest li"` (la lista es un `<ul>`, cada suscripción un `<li>`)
+  - `hx-swap="outerHTML"`
+  - `hx-confirm="¿Seguro que querés eliminar la suscripción a …? No se puede deshacer."`
+- **Handler `DELETE /cuenta/suscripciones/{id}`** (`eliminar`): lee el id de la
+  ruta, verifica que la suscripción sea del usuario (si no, 404) y que no sea
+  de solo lectura (si no, 403), la borra y responde **200 sin contenido
+  principal**: HTMX reemplaza la fila por nada y desaparece. En la misma
+  respuesta, fuera de banda (`hx-swap-oob`), llegan el *Gasto mensual*
+  (`#total-mes`) y el calendario (`#panel-calendario`) recalculados, y el
+  aviso *"Suscripción eliminada."*. El `mes` (y la búsqueda `q`) viajan en
+  la URL para poder recalcularlos. Si era la última suscripción de la lista,
+  se reemplaza la lista entera para mostrar el mensaje de lista vacía.
+
+## Otros detalles
+
+- Si la sesión venció y el pedido es de HTMX, `conSesion` responde con
+  `HX-Redirect: /login`, así HTMX lleva al navegador entero al login (en vez
+  de meter la página de login dentro del fragmento).
+- Respuestas por ruta:
+
+| Ruta | Sin HTMX | Con HTMX (`HX-Request: true`) |
+|---|---|---|
+| `POST /cuenta/suscripciones` (ok) | 200 · fragmento | 200 · `PanelActivas` + formulario vacío (oob) + aviso (oob) |
+| `POST /cuenta/suscripciones` (error) | 400/409 · página completa | 200 · formulario + aviso (oob), `HX-Retarget: #form-suscripcion` |
+| `POST /cuenta/suscripciones/nueva/catalogo` | 200 · página completa | 200 · página completa, `HX-Retarget: body` |
+| `DELETE /cuenta/suscripciones/{id}` (ok) | 200 · vacío + gasto, calendario y aviso (oob) | igual |
+| `DELETE /cuenta/suscripciones/{id}` (ajena / solo lectura) | 404 / 403 · aviso | 200 · aviso, `HX-Retarget: #avisos` |
+
 # Arquitectura
 
 
 - **`views/`** — componentes templ (capa de presentación) y funciones de
   apoyo de las vistas (`vencimientos.go`: meses, calendario, totales).
 - **`handlers/`** — handlers HTTP: leen el formulario, verifican la sesión,
-  llaman a la lógica y renderizan la vista o redirigen. Reemplazan a los
+  llaman a la lógica y renderizan la vista (página completa o, para HTMX, un
+  fragmento) o redirigen. Reemplazan a los
   handlers JSON del TP4. Como sugiere la clase de lógica del negocio
   ("estructura limpia": handlers separados por rutas, funciones auxiliares y
   manejo centralizado de errores), están separados en archivos:
   - `web.go`: todas las rutas (`Registrar`);
   - `usuarios.go`: inicio, login, registro, logout y mi cuenta;
-  - `suscripciones.go`: lista del mes, alta, modificar, ver la contraseña y eliminar;
+  - `suscripciones.go`: lista del mes, alta (con HTMX), modificar, ver la contraseña y eliminar (DELETE con HTMX);
   - `comunes.go`: lo que comparten las páginas (sesión, layout, avisos,
     renderizado y `describirError`, que traduce los errores de la lógica a
     códigos HTTP);
@@ -195,13 +285,13 @@ El modelo de datos está compuesto por 4 tablas relacionales, definidas en
 ├── handlers/
 │   ├── web.go              # Todas las rutas
 │   ├── usuarios.go         # Inicio, login, registro, logout y mi cuenta
-│   ├── suscripciones.go    # Lista, alta, modificar, contraseña y eliminar
-│   ├── comunes.go          # Sesión de la página, renderizado, avisos y errores
+│   ├── suscripciones.go    # Lista, alta (HTMX), modificar, contraseña y eliminar (DELETE, HTMX)
+│   ├── comunes.go          # Sesión de la página, renderizado, avisos, errores y ayudas de HTMX
 │   ├── formularios.go      # Lectura de formularios y filtros
 │   └── sesiones.go         # Sesiones con cookie HttpOnly
 ├── logic/                  # Reglas de negocio sin HTTP: suscripcion.go (incluye cuentas distintas), renovacion.go (renovación y solo lectura), datos_de_prueba.go y sus tests
 ├── views/                  # Componentes templ, vencimientos.go y views_test.go
-├── static/styles.css       # Estilos (sin JavaScript)
+├── static/styles.css       # Estilos (sin JavaScript propio; HTMX se carga desde el CDN)
 ├── db/
 │   ├── schema/schema.sql
 │   ├── queries/queries.sql

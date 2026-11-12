@@ -34,6 +34,14 @@ func (h *Web) conSesion(siguiente manejadorConUsuario) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		usr := h.usuarioActual(r)
 		if usr == nil {
+			// en un pedido de HTMX una redirección común se seguiría por AJAX y
+			// la página de login quedaría dentro del fragmento: con HX-Redirect
+			// HTMX lleva al navegador entero al login
+			if esHTMX(r) {
+				w.Header().Set("HX-Redirect", "/login")
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
@@ -70,6 +78,25 @@ func avisoDeLaURL(r *http.Request) views.Aviso {
 
 func avisoError(mensaje string) views.Aviso {
 	return views.Aviso{Texto: mensaje, Error: true}
+}
+
+// esHTMX indica si el pedido lo hizo HTMX (envía el encabezado HX-Request)
+func esHTMX(r *http.Request) bool {
+	return r.Header.Get("HX-Request") == "true"
+}
+
+// cambiarDestinoHTMX hace que HTMX ponga la respuesta en otro lugar que el
+// hx-target del elemento (encabezados HX-Retarget y HX-Reswap). Se usa para
+// los errores: HTMX 1.9 no reemplaza nada si el código es 4xx o 5xx, así que
+// a HTMX se le responde 200 con el error en el fragmento. Sin HTMX (por
+// ejemplo desde Hurl) se conserva el código de error. Devuelve el código.
+func cambiarDestinoHTMX(w http.ResponseWriter, r *http.Request, estado int, destino, swap string) int {
+	if !esHTMX(r) {
+		return estado
+	}
+	w.Header().Set("HX-Retarget", destino)
+	w.Header().Set("HX-Reswap", swap)
+	return http.StatusOK
 }
 
 func render(w http.ResponseWriter, r *http.Request, estado int, componente templ.Component) {

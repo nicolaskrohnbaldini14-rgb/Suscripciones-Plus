@@ -24,7 +24,6 @@ type Detalle struct {
 	Sub              Fila
 	Editable         bool
 	Editando         bool
-	Eliminando       bool // se pide confirmación antes de eliminar
 	Form             FormModificar
 	ErrorEditar      string
 	PasswordRevelada bool
@@ -186,10 +185,21 @@ func UrlSuscripciones(mes, busqueda string, ver int32, editar bool) string {
 	return "/cuenta/suscripciones?" + v.Encode()
 }
 
-// UrlEliminar lleva al recuadro que pide confirmación antes de eliminar una
-// suscripción (?ver=id&eliminar=1)
-func UrlEliminar(mes, busqueda string, id int32) string {
-	return UrlSuscripciones(mes, busqueda, id, false) + "&eliminar=1"
+// UrlBorrar es la ruta del DELETE de una suscripción (hx-delete). Lleva el
+// mes y la búsqueda de la lista para recalcular el gasto y el calendario.
+func UrlBorrar(mes, busqueda string, id int32) string {
+	v := url.Values{}
+	if mes != "" {
+		v.Set("mes", mes)
+	}
+	if busqueda != "" {
+		v.Set("q", busqueda)
+	}
+	ruta := "/cuenta/suscripciones/" + strconv.Itoa(int(id))
+	if len(v) == 0 {
+		return ruta
+	}
+	return ruta + "?" + v.Encode()
 }
 
 func valorCuenta(cuenta *string) string {

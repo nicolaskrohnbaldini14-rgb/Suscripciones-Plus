@@ -21,8 +21,9 @@ xpath "count(//details[@class='panel-categoria']//*[normalize-space(.)='Netflix'
 xpath "count(//details[@class='panel-categoria']//*[normalize-space(.)='Pádel'])" >= 1
 # sin sesión los servicios no son links para suscribirse
 xpath "count(//a[contains(@href,'/cuenta/suscripciones/nueva?servicio=')])" == 0
-# no hay JavaScript
-xpath "count(//script)" == 0
+# TP6: el único script es HTMX desde el CDN (no hay JavaScript propio)
+xpath "count(//script)" == 1
+xpath "string(//head/script/@src)" == "https://unpkg.com/htmx.org@1.9.10"
 
 
 # ---------- 2. Páginas de login y registro ----------
@@ -61,10 +62,17 @@ HTTP 303
 [Asserts]
 header "Location" == "/login"
 
-POST {{host}}/cuenta/suscripciones/1/eliminar
+DELETE {{host}}/cuenta/suscripciones/1
 HTTP 303
 [Asserts]
 header "Location" == "/login"
+
+# TP6: si el pedido es de HTMX, HX-Redirect lleva al navegador entero al login
+DELETE {{host}}/cuenta/suscripciones/1
+HX-Request: true
+HTTP 401
+[Asserts]
+header "HX-Redirect" == "/login"
 
 
 # ---------- 4. Ya no existen el panel ni el registro de empresas ----------

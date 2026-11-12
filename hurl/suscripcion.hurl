@@ -74,6 +74,38 @@ HTTP 400
 [Asserts]
 xpath "normalize-space(//div[contains(@class,'mensaje')])" == "Elegí un servicio del catálogo."
 
+# TP6: con HTMX (encabezado HX-Request) el error vuelve como fragmento: el
+# formulario con lo escrito (HX-Retarget lo pone en lugar del formulario) y
+# el aviso fuera de banda. Se responde 200 porque HTMX 1.9 no reemplaza nada
+# si la respuesta es un error.
+POST {{host}}/cuenta/suscripciones
+HX-Request: true
+[FormParams]
+id_servicio: 0
+monto: 1500
+fecha_inicio: 2026-01-01
+fecha_vencimiento: 2026-12-31
+HTTP 200
+[Asserts]
+header "HX-Retarget" == "#form-suscripcion"
+header "HX-Reswap" == "outerHTML"
+body not contains "<html"
+xpath "string(//form[@id='form-suscripcion']//input[@name='monto']/@value)" == "1500"
+xpath "string(//div[@id='avisos']/@hx-swap-oob)" == "true"
+xpath "normalize-space(//div[@id='avisos'])" == "Elegí un servicio del catálogo."
+
+# el botón del catálogo, con HTMX, devuelve la página completa para el <body>
+POST {{host}}/cuenta/suscripciones/nueva/catalogo
+HX-Request: true
+[FormParams]
+id_servicio: 0
+monto: 1500
+HTTP 200
+[Asserts]
+header "HX-Retarget" == "body"
+header "HX-Reswap" == "innerHTML"
+xpath "count(//div[contains(@class,'panel-servicios') and contains(@class,'abierto')])" == 1
+
 # "Elegir desde el catálogo": el catálogo grande y centrado, con las categorías
 # en grilla (los servicios se despliegan al hacer clic), con Netflix resaltado
 GET {{host}}/cuenta/suscripciones/nueva?catalogo=1&servicio={{netflix_id}}
@@ -84,8 +116,11 @@ xpath "count(//div[contains(@class,'modo-elegir')]//details[@class='panel-catego
 xpath "normalize-space(//a[contains(@class,'panel-servicio') and contains(@class,'elegido')])" == "Netflix"
 
 
-# ---------- 1. Crear suscripción: redirige al mes en que vence (303) ----------
+# ---------- 1. Crear suscripción (TP6): sin redirección ----------
+# devuelve solo la lista de activas actualizada (destino del hx-target) y,
+# fuera de banda, el formulario vacío y el aviso
 POST {{host}}/cuenta/suscripciones
+HX-Request: true
 [FormParams]
 id_servicio: {{netflix_id}}
 monto: 1500
@@ -93,18 +128,26 @@ fecha_inicio: 2026-01-01
 fecha_vencimiento: 2026-12-31
 usuario_cuenta: cuenta@test.com
 password_cuenta: clavecuenta
-HTTP 303
+HTTP 200
 [Asserts]
-header "Location" == "/cuenta/suscripciones?mes=2026-12&ok=creada"
+header "Location" not exists
+body not contains "<html"
+body startsWith "<section id=\"panel-activas\""
+xpath "count(//section[@id='panel-activas']//li[contains(@class,'item')]//strong[normalize-space(.)='Netflix — $ 1.500,00'])" == 1
+# formulario vacío, fuera de banda
+xpath "string(//form[@id='form-suscripcion']/@hx-swap-oob)" == "true"
+xpath "string(//form[@id='form-suscripcion']//input[@name='monto']/@value)" == ""
+xpath "string(//form[@id='form-suscripcion']//input[@name='id_servicio']/@value)" == "0"
+xpath "normalize-space(//div[@id='avisos'][@hx-swap-oob='true'])" == "Suscripción creada."
+body not contains "clavecuenta"
 
 
 # ---------- 2. Aparece en la lista del mes, sin datos de la cuenta ----------
-GET {{host}}/cuenta/suscripciones?mes=2026-12&ok=creada
+GET {{host}}/cuenta/suscripciones?mes=2026-12
 HTTP 200
 [Captures]
 sub_id: xpath "string(//li[.//strong[starts-with(normalize-space(.),'Netflix — $ 1.500,00')]]//a[@class='item-enlace']/@href)" regex "ver=(\\d+)"
 [Asserts]
-xpath "normalize-space(//div[contains(@class,'mensaje')])" == "Suscripción creada."
 xpath "count(//li[contains(@class,'item')]//span[@class='icono-categoria'])" == 1
 xpath "normalize-space(//p[@class='total'])" == "Gasto mensual (activo): $ 1.500,00"
 body not contains "cuenta@test.com"
@@ -119,7 +162,7 @@ monto: 900
 fecha_inicio: 2026-01-01
 fecha_vencimiento: 2026-12-31
 usuario_cuenta: otra@test.com
-HTTP 303
+HTTP 200
 
 # la misma cuenta (sin importar mayúsculas) no se puede repetir (409)
 POST {{host}}/cuenta/suscripciones
@@ -151,7 +194,7 @@ id_servicio: {{padel_id}}
 monto: 15000
 fecha_inicio: 2026-01-01
 fecha_vencimiento: 2026-12-15
-HTTP 303
+HTTP 200
 
 GET {{host}}/cuenta/suscripciones?mes=2026-12
 HTTP 200
@@ -398,9 +441,7 @@ monto: 2900
 fecha_inicio: 2024-03-10
 fecha_vencimiento: 2025-03-10
 usuario_cuenta: renueva@test.com
-HTTP 303
-[Asserts]
-header "Location" == "/cuenta/suscripciones?mes=2025-03&ok=creada"
+HTTP 200
 
 GET {{host}}/cuenta/suscripciones?mes=2025-03
 HTTP 200
@@ -413,13 +454,8 @@ xpath "normalize-space(//li[contains(@class,'item-solo-lectura')]//span[@class='
 xpath "normalize-space(//p[@class='total'])" == "Gasto mensual: $ 2.900,00"
 # en un mes anterior no hay botones para modificar ni eliminar
 xpath "count(//a[@class='btn-modificar'])" == 0
-xpath "count(//a[@class='btn-eliminar'])" == 0
-
-# y tampoco se puede pedir la confirmación para eliminar
-GET {{host}}/cuenta/suscripciones?mes=2025-03&ver={{sub_vieja_id}}&eliminar=1
-HTTP 200
-[Asserts]
-xpath "count(//div[contains(@class,'mensaje-confirmar')])" == 0
+xpath "count(//button[@class='btn-eliminar'])" == 0
+xpath "count(//*[@hx-delete])" == 0
 
 # el período siguiente (marzo de 2026) mantiene el día y el monto
 GET {{host}}/cuenta/suscripciones?mes=2026-03
@@ -435,12 +471,18 @@ HTTP 200
 xpath "count(//li[contains(@class,'item')]//strong[starts-with(normalize-space(.),'Spotify')])" == 1
 
 # el período vencido no se puede modificar, cambiar de estado ni borrar (403)
-POST {{host}}/cuenta/suscripciones/{{sub_vieja_id}}/eliminar
-[FormParams]
-mes: 2025-03
+DELETE {{host}}/cuenta/suscripciones/{{sub_vieja_id}}?mes=2025-03
 HTTP 403
 [Asserts]
 xpath "normalize-space(//div[contains(@class,'mensaje')])" contains "no se pueden modificar"
+
+# con HTMX: 200 para que se vea el aviso, y la fila no se toca (HX-Retarget)
+DELETE {{host}}/cuenta/suscripciones/{{sub_vieja_id}}?mes=2025-03
+HX-Request: true
+HTTP 200
+[Asserts]
+header "HX-Retarget" == "#avisos"
+xpath "normalize-space(//div[@id='avisos'])" contains "no se pueden modificar"
 
 POST {{host}}/cuenta/suscripciones/{{sub_vieja_id}}/modificar
 [FormParams]
@@ -463,39 +505,43 @@ xpath "count(//article[@id='detalle']//p[@class='aviso-lectura'])" == 1
 xpath "count(//form[contains(@action,'/modificar')])" == 0
 
 
-# ---------- 11. Eliminar una suscripción propia: primero se confirma ----------
-# en la lista, "Eliminar" es un link a la confirmación (no borra directamente)
+# ---------- 11. Eliminar una suscripción propia (TP6: con HTMX) ----------
+# en la lista, "Eliminar" es un botón con hx-delete que reemplaza la fila más
+# cercana y pide confirmación antes de borrar
 GET {{host}}/cuenta/suscripciones?mes=2026-12
 HTTP 200
 [Asserts]
-xpath "count(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]//a[@class='btn-eliminar'][contains(@href,'eliminar=1')])" == 1
-xpath "count(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]//form[contains(@action,'/eliminar')])" == 0
+xpath "string(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]//button[@class='btn-eliminar']/@hx-delete)" == "/cuenta/suscripciones/{{sub_otra_id}}?mes=2026-12"
+xpath "string(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]//button[@class='btn-eliminar']/@hx-target)" == "closest li"
+xpath "string(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]//button[@class='btn-eliminar']/@hx-swap)" == "outerHTML"
+xpath "string(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]//button[@class='btn-eliminar']/@hx-confirm)" contains "¿Seguro que querés eliminar la suscripción a Netflix?"
 # orden: estado, Modificar y Eliminar
 xpath "name(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]/*[2])" == "span"
 xpath "string(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]/*[3]/@class)" == "btn-modificar"
 xpath "string(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]/*[4]/@class)" == "btn-eliminar"
+xpath "normalize-space(//p[@id='total-mes'])" == "Gasto mensual (activo): $ 15.900,00"
 
-GET {{host}}/cuenta/suscripciones?mes=2026-12&ver={{sub_otra_id}}&eliminar=1
+# DELETE: 200 sin contenido principal (la fila desaparece); fuera de banda
+# llegan el gasto del mes actualizado, el calendario y el aviso
+DELETE {{host}}/cuenta/suscripciones/{{sub_otra_id}}?mes=2026-12
+HX-Request: true
 HTTP 200
 [Asserts]
-# la pregunta aparece en el aviso negro de los mensajes
-xpath "normalize-space(//div[contains(@class,'mensaje-confirmar')]/span[@id='confirmar-texto'])" contains "¿Seguro que querés eliminar la suscripción a Netflix?"
-xpath "normalize-space(//div[contains(@class,'mensaje-confirmar')])" contains "No se puede deshacer."
-xpath "count(//div[contains(@class,'mensaje-confirmar')]//form[@action='/cuenta/suscripciones/{{sub_otra_id}}/eliminar'])" == 1
-xpath "string(//div[contains(@class,'mensaje-confirmar')]//a[contains(@class,'boton-secundario')]/@href)" == "/cuenta/suscripciones?mes=2026-12"
-
-# al confirmar se elimina (303)
-POST {{host}}/cuenta/suscripciones/{{sub_otra_id}}/eliminar
-[FormParams]
-mes: 2026-12
-HTTP 303
-[Asserts]
-header "Location" == "/cuenta/suscripciones?mes=2026-12&ok=eliminada"
+header "Location" not exists
+body startsWith "<p id=\"total-mes\""
+body not contains "<li class=\"item"
+xpath "normalize-space(//p[@id='total-mes'][@hx-swap-oob='true'])" == "Gasto mensual (activo): $ 15.000,00"
+xpath "count(//aside[@id='panel-calendario'][@hx-swap-oob='true'])" == 1
+xpath "normalize-space(//div[@id='avisos'][@hx-swap-oob='true'])" == "Suscripción eliminada."
 
 GET {{host}}/cuenta/suscripciones?mes=2026-12
 HTTP 200
 [Asserts]
 xpath "count(//strong[starts-with(normalize-space(.),'Netflix — $ 900,00')])" == 0
+
+# ya no existe: 404
+DELETE {{host}}/cuenta/suscripciones/{{sub_otra_id}}
+HTTP 404
 
 POST {{host}}/logout
 HTTP 303
@@ -515,9 +561,7 @@ HTTP 200
 xpath "count(//div[@class='detalle-fondo'])" == 0
 xpath "count(//strong[starts-with(normalize-space(.),'Netflix')])" == 0
 
-POST {{host}}/cuenta/suscripciones/{{sub_id}}/eliminar
-[FormParams]
-mes: 2026-12
+DELETE {{host}}/cuenta/suscripciones/{{sub_id}}?mes=2026-12
 HTTP 404
 
 POST {{host}}/cuenta/suscripciones/{{sub_id}}/password

@@ -39,9 +39,10 @@ templ contenidoCuenta(sesion *Sesion, resumen ResumenMes, activas Activas) {
 }
 
 // PanelActivas lista todas las suscripciones activas; cada una lleva al
-// detalle en el mes en que vence
+// detalle en el mes en que vence. Se usa en "Mi cuenta" y en "Nueva
+// suscripción", donde es el destino de HTMX al crear una (id panel-activas).
 templ PanelActivas(activas Activas) {
-	<section class="panel activas" aria-labelledby="titulo-activas">
+	<section id={ IDPanelActivas } class="panel activas" aria-labelledby="titulo-activas">
 		<h2 id="titulo-activas">Tus suscripciones activas</h2>
 		if len(activas.Lista) == 0 {
 			<ul class="lista">

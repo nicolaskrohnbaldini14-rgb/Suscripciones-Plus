@@ -49,13 +49,16 @@ templ Layout(p Pagina, contenido templ.Component) {
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ p.Titulo } · Suscripciones+</title>
 			<link rel="stylesheet" href="/static/styles.css"/>
+			// TP6: HTMX (desde el CDN, el repositorio no tiene archivos .js).
+			// Permite actualizar fragmentos de la página sin recargarla.
+			<script src="https://unpkg.com/htmx.org@1.9.10"></script>
 		</head>
 		<body data-pagina={ p.Clave }>
 			<header class="barra">
 				<a href="/" class="marca">Suscripciones+</a>
 				@Navegacion(p)
 			</header>
-			@AvisoMensaje(p.Aviso)
+			@Avisos(p.Aviso, false)
 			<main class="contenido">
 				@contenido
 			</main>
