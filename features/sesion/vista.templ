@@ -1,7 +1,9 @@
-package views
+package sesion
 
-templ LoginPage(p Pagina, email string) {
-	@Layout(p, contenidoLogin(email))
+import "tp2-krohn-trapani-cicopiedi/plataforma/vista"
+
+templ LoginPage(p vista.Pagina, email string) {
+	@vista.Layout(p, contenidoLogin(email))
 }
 
 templ contenidoLogin(email string) {

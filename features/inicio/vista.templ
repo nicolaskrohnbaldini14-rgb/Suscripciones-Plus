@@ -1,11 +1,13 @@
-package views
+package inicio
+
+import "tp2-krohn-trapani-cicopiedi/plataforma/vista"
 
 // HomePage es la portada pública, centrada en la pantalla
-templ HomePage(p Pagina) {
-	@Layout(p, contenidoHome(p.Sesion))
+templ HomePage(p vista.Pagina) {
+	@vista.Layout(p, contenidoHome(p.Sesion))
 }
 
-templ contenidoHome(sesion *Sesion) {
+templ contenidoHome(sesion *vista.Sesion) {
 	<section class="portada">
 		<h1>Suscripciones+</h1>
 		<p class="lema">¡Todos tus servicios, en el mismo lugar!</p>

@@ -1,4 +1,4 @@
-package views
+package vista
 
 import (
 	"fmt"
@@ -25,15 +25,15 @@ templ AvisoMensaje(a Aviso) {
 // así se muestra "Suscripción creada", "Suscripción eliminada" o un error sin
 // recargar la página.
 templ Avisos(a Aviso, oob bool) {
-	<div id="avisos" { fueraDeBanda(oob)... }>
+	<div id="avisos" { FueraDeBanda(oob)... }>
 		@AvisoMensaje(a)
 	</div>
 }
 
-// fueraDeBanda agrega hx-swap-oob="true" a un componente: HTMX busca en la
+// FueraDeBanda agrega hx-swap-oob="true" a un componente: HTMX busca en la
 // página el elemento con el mismo id y lo reemplaza, aunque la respuesta
 // tenga como destino (hx-target) otro elemento.
-func fueraDeBanda(oob bool) templ.Attributes {
+func FueraDeBanda(oob bool) templ.Attributes {
 	if oob {
 		return templ.Attributes{"hx-swap-oob": "true"}
 	}
@@ -98,16 +98,16 @@ func svgCategoria(categoria string) string {
 	return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">` + trazos + `</svg>`
 }
 
-// formatearMonto convierte "2500.00" en "$ 2.500,00"
-func formatearMonto(monto string) string {
+// FormatearMonto convierte "2500.00" en "$ 2.500,00"
+func FormatearMonto(monto string) string {
 	valor, err := strconv.ParseFloat(monto, 64)
 	if err != nil {
 		return "$ " + monto
 	}
-	return "$ " + formatearNumero(valor)
+	return "$ " + FormatearNumero(valor)
 }
 
-func formatearNumero(valor float64) string {
+func FormatearNumero(valor float64) string {
 	partes := strings.Split(fmt.Sprintf("%.2f", valor), ".")
 	entero, decimales := partes[0], partes[1]
 
@@ -126,6 +126,6 @@ func formatearNumero(valor float64) string {
 	return signo + strings.Join(miles, ".") + "," + decimales
 }
 
-func formatearFecha(fecha time.Time) string {
+func FormatearFecha(fecha time.Time) string {
 	return fecha.Format("02/01/2006")
 }

@@ -1,4 +1,6 @@
-package views
+package registro
+
+import "tp2-krohn-trapani-cicopiedi/plataforma/vista"
 
 // DatosRegistro son los valores que se vuelven a mostrar si el alta falla
 type DatosRegistro struct {
@@ -6,8 +8,8 @@ type DatosRegistro struct {
 	Email  string
 }
 
-templ RegistroPage(p Pagina, datos DatosRegistro) {
-	@Layout(p, contenidoRegistro(datos))
+templ RegistroPage(p vista.Pagina, datos DatosRegistro) {
+	@vista.Layout(p, contenidoRegistro(datos))
 }
 
 templ contenidoRegistro(datos DatosRegistro) {

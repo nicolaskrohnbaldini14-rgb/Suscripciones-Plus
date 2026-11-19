@@ -15,7 +15,12 @@ import (
 	"github.com/joho/godotenv"
 
 	"tp2-krohn-trapani-cicopiedi/db/sqlc"
-	"tp2-krohn-trapani-cicopiedi/handlers"
+	"tp2-krohn-trapani-cicopiedi/features/cuenta"
+	"tp2-krohn-trapani-cicopiedi/features/inicio"
+	"tp2-krohn-trapani-cicopiedi/features/missuscripciones"
+	"tp2-krohn-trapani-cicopiedi/features/nuevasuscripcion"
+	"tp2-krohn-trapani-cicopiedi/features/registro"
+	"tp2-krohn-trapani-cicopiedi/features/sesion"
 	"tp2-krohn-trapani-cicopiedi/logic"
 	"tp2-krohn-trapani-cicopiedi/plataforma"
 )
@@ -60,9 +65,20 @@ func main() {
 		log.Printf("Suscripciones renovadas: %d", renovadas)
 	}
 
-	// 4. Handlers que renderizan las vistas templ (la lógica de negocio sigue en logic/)
+	// 4. Rutas. Vertical Slice Architecture: cada funcionalidad (features/)
+	//    registra sus propias rutas, con su handler y su vista templ. Lo que
+	//    comparten (servicios de logic/, sesiones, layout) está en plataforma/
+	app := plataforma.NuevaApp(queries)
 	mux := http.NewServeMux()
-	handlers.NuevoWeb(queries, handlers.NuevasSesiones()).Registrar(mux)
+	inicio.Registrar(mux, app)
+	sesion.Registrar(mux, app)
+	registro.Registrar(mux, app)
+	cuenta.Registrar(mux, app)
+	nuevasuscripcion.Registrar(mux, app)
+	missuscripciones.Registrar(mux, app)
+
+	// archivos estáticos (CSS)
+	mux.Handle("GET /static/", plataforma.Estaticos())
 
 	// health check de la aplicación: GET /salud/vivo y /salud/lista (salud.go)
 	registrarSalud(mux, dbConn)

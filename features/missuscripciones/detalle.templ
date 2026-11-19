@@ -1,0 +1,110 @@
+package missuscripciones
+
+import (
+	"fmt"
+
+	"tp2-krohn-trapani-cicopiedi/plataforma/vista"
+)
+
+// DetalleSuscripcion se dibuja sobre la lista desenfocada. El fondo y la ×
+// son links que vuelven a la lista (sin JavaScript).
+templ DetalleSuscripcion(d DatosSuscripciones, det Detalle) {
+	<div class="detalle-fondo">
+		<a class="detalle-fondo-cerrar" href={ templ.URL(vista.UrlSuscripciones(d.Mes, d.Busqueda, 0, false)) } aria-label="Cerrar el detalle"></a>
+		<article id="detalle" class="detalle" role="dialog" aria-modal="true" aria-labelledby="detalle-titulo">
+			<div class="detalle-contenido">
+				<a class="detalle-cerrar" href={ templ.URL(vista.UrlSuscripciones(d.Mes, d.Busqueda, 0, false)) } aria-label="Cerrar">×</a>
+				<span class="etiqueta">{ det.Sub.ServicioCategoria }</span>
+				<h2 id="detalle-titulo">{ det.Sub.ServicioNombre }</h2>
+				<div class="detalle-monto-fila">
+					<p class="detalle-monto">{ vista.FormatearMonto(det.Sub.Monto) } por mes</p>
+					if det.Editable && !det.Editando {
+						<a class="boton-chico" href={ templ.URL(vista.UrlSuscripciones(d.Mes, d.Busqueda, det.Sub.IDSuscripcion, true)) }>Modificar</a>
+					}
+				</div>
+				if det.Editando {
+					<form method="post" action={ templ.URL(fmt.Sprintf("/cuenta/suscripciones/%d/modificar", det.Sub.IDSuscripcion)) } class="formulario editar-suscripcion">
+						<input type="hidden" name="mes" value={ d.Mes }/>
+						<input type="hidden" name="q" value={ d.Busqueda }/>
+						<label>
+							Monto mensual
+							<input type="text" inputmode="decimal" name="monto" value={ det.Form.Monto } placeholder="Ej.: 4500.50" autocomplete="off" required autofocus/>
+						</label>
+						<label>
+							Usuario de la cuenta del servicio
+							<input type="text" name="usuario_cuenta" value={ det.Form.UsuarioCuenta } placeholder="Sin cuenta" autocomplete="off"/>
+						</label>
+						<label>
+							Nueva contraseña de la cuenta
+							<input type="password" name="password_cuenta" placeholder="Dejala vacía para no cambiarla" autocomplete="new-password"/>
+						</label>
+						<label>
+							Estado
+							<select name="estado">
+								for _, estado := range []string{"Activa", "Pausada"} {
+									<option value={ estado } selected?={ estado == det.Form.Estado }>{ estado }</option>
+								}
+							</select>
+						</label>
+						if det.ErrorEditar != "" {
+							<p class="detalle-error" role="alert">{ det.ErrorEditar }</p>
+						}
+						<div class="acciones-confirmar">
+							<a class="boton-secundario" href={ templ.URL(vista.UrlSuscripciones(d.Mes, d.Busqueda, det.Sub.IDSuscripcion, false)) }>Cancelar</a>
+							<button type="submit">Guardar</button>
+						</div>
+					</form>
+				}
+				if !det.Editable {
+					<p class="aviso-lectura">Esta suscripción es solo de lectura.</p>
+				}
+				<dl class="detalle-datos">
+					<dt>Estado</dt>
+					<dd>{ vista.TextoEstado(det.Sub.Estado) }</dd>
+					<dt>Cuenta</dt>
+					<dd>
+						if det.Sub.UsuarioCuenta != nil {
+							{ *det.Sub.UsuarioCuenta }
+						} else {
+							Sin cuenta
+						}
+					</dd>
+					<dt>Inicio</dt>
+					<dd>{ vista.FormatearFecha(det.Sub.FechaInicio) }</dd>
+					<dt>Vencimiento</dt>
+					<dd>{ vista.FormatearFecha(det.Sub.FechaVencimiento) }</dd>
+					<dt>Contraseña</dt>
+					<dd>
+						if !det.PasswordRevelada {
+							<span>••••••••</span>
+						} else if det.Password != nil {
+							<span class="revelada">{ *det.Password }</span>
+						} else {
+							<span>No guardaste contraseña para esta suscripción</span>
+						}
+					</dd>
+				</dl>
+				if !det.PasswordRevelada {
+					// para ver la contraseña de la cuenta se confirma la del usuario
+					<details class="revelar" open?={ det.ErrorPassword != "" }>
+						<summary>Mostrar contraseña</summary>
+						<form method="post" action={ templ.URL(fmt.Sprintf("/cuenta/suscripciones/%d/password", det.Sub.IDSuscripcion)) } class="formulario confirmar">
+							<input type="hidden" name="mes" value={ d.Mes }/>
+							<input type="hidden" name="q" value={ d.Busqueda }/>
+							<label>
+								Para ver la contraseña, confirmá la contraseña de tu usuario de Suscripciones+
+								<input type="password" name="password" autocomplete="current-password" required/>
+							</label>
+							if det.ErrorPassword != "" {
+								<p class="detalle-error" role="alert">{ det.ErrorPassword }</p>
+							}
+							<div class="acciones-confirmar">
+								<button type="submit">Mostrar</button>
+							</div>
+						</form>
+					</details>
+				}
+			</div>
+		</article>
+	</div>
+}

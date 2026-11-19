@@ -1,0 +1,44 @@
+package cuenta
+
+import (
+	"strconv"
+
+	"tp2-krohn-trapani-cicopiedi/plataforma/vista"
+)
+
+// ResumenMes es lo que se muestra debajo del saludo: lo que vence este mes
+type ResumenMes struct {
+	NombreMes string
+	Cantidad  int
+	Total     string
+}
+
+// CuentaPage es lo primero que ve el usuario al ingresar
+templ CuentaPage(p vista.Pagina, resumen ResumenMes, activas vista.Activas) {
+	@vista.Layout(p, contenidoCuenta(p.Sesion, resumen, activas))
+}
+
+templ contenidoCuenta(sesion *vista.Sesion, resumen ResumenMes, activas vista.Activas) {
+	<section class="bienvenida">
+		<h1>Hola, { sesion.Nombre }</h1>
+		<p class="lema">En { resumen.NombreMes } { textoVencen(resumen.Cantidad) } · { resumen.Total }</p>
+	</section>
+	<div class="opciones">
+		<a href="/cuenta/suscripciones" class="opcion panel">
+			<h3>Ver mis suscripciones</h3>
+			<p>Consultá todo lo que pagás, el estado y la vigencia de cada servicio.</p>
+		</a>
+		<a href="/cuenta/suscripciones/nueva" class="opcion panel">
+			<h3>Nueva suscripción</h3>
+			<p>Agregá un servicio al que te suscribiste para tenerlo controlado.</p>
+		</a>
+	</div>
+	@vista.PanelActivas(activas)
+}
+
+func textoVencen(cantidad int) string {
+	if cantidad == 1 {
+		return "vence 1 suscripción"
+	}
+	return "vencen " + strconv.Itoa(cantidad) + " suscripciones"
+}

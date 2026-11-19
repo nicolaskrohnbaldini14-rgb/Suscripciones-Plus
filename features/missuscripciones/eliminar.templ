@@ -1,0 +1,65 @@
+package missuscripciones
+
+import (
+	"strconv"
+
+	"tp2-krohn-trapani-cicopiedi/plataforma/vista"
+)
+
+// RespuestaSuscripcionEliminada es lo que devuelve DELETE
+// /cuenta/suscripciones/{id}. El contenido principal está vacío: HTMX
+// reemplaza la fila (hx-target="closest li") por nada y la fila desaparece.
+// Fuera de banda (hx-swap-oob) se actualizan el gasto del mes, el calendario
+// y el aviso, que dejaron de estar al día.
+templ RespuestaSuscripcionEliminada(d DatosSuscripciones, aviso vista.Aviso) {
+	@TotalMes(d, true)
+	@Calendario(d, true)
+	@vista.Avisos(aviso, true)
+}
+
+// RespuestaListaVacia: se borró la última suscripción de la lista; el
+// servidor cambia el destino (HX-Retarget) a la lista entera
+templ RespuestaListaVacia(d DatosSuscripciones, aviso vista.Aviso) {
+	@ListaSuscripciones(d)
+	@TotalMes(d, true)
+	@Calendario(d, true)
+	@vista.Avisos(aviso, true)
+}
+
+// IDFila es el id de la fila de una suscripción en la lista (lo usa el
+// DELETE para reemplazarla)
+func IDFila(id int32) string {
+	return "fila-" + strconv.Itoa(int(id))
+}
+
+// ConfirmarEliminar (TP6) pide confirmación antes de borrar en el mismo aviso
+// negro de los mensajes (fijo arriba de la pantalla), sin la ventana del
+// navegador. Reemplaza el contenedor #avisos.
+//   - "Sí, eliminar" envía DELETE /cuenta/suscripciones/{id} y reemplaza la
+//     fila (#fila-{id}, outerHTML) por la respuesta vacía; esa respuesta trae
+//     fuera de banda el aviso "Suscripción eliminada", que reemplaza esta
+//     pregunta, y el gasto y el calendario actualizados.
+//   - "Cancelar" le pide al servidor el aviso vacío.
+templ ConfirmarEliminar(mes, busqueda string, s vista.Fila) {
+	<div id="avisos">
+		<div class="mensaje error mensaje-confirmar" role="alertdialog" aria-labelledby="confirmar-texto">
+			<span id="confirmar-texto">¿Seguro que querés eliminar la suscripción a { s.ServicioNombre }? No se puede deshacer.</span>
+			<span class="mensaje-acciones">
+				<button
+					type="button"
+					class="boton-secundario boton-chico"
+					hx-get={ UrlConfirmarEliminar(mes, busqueda, s.IDSuscripcion, true) }
+					hx-target="#avisos"
+					hx-swap="outerHTML"
+				>Cancelar</button>
+				<button
+					type="button"
+					class="btn-confirmar-aviso boton-chico"
+					hx-delete={ UrlBorrar(mes, busqueda, s.IDSuscripcion) }
+					hx-target={ "#" + IDFila(s.IDSuscripcion) }
+					hx-swap="outerHTML"
+				>Sí, eliminar</button>
+			</span>
+		</div>
+	</div>
+}

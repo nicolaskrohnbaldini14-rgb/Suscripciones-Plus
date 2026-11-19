@@ -119,7 +119,7 @@ al final borra los contenedores y volúmenes.
 make
 ```
 
-**Solo los tests de Go** (`main_test.go`, `logic/` y `views/`): `make test`
+**Solo los tests de Go** (`main_test.go`, `logic/`, `features/` y `plataforma/vista/`): `make test`
 necesita el código de sqlc y templ generado y la base levantada, porque
 `main_test.go` prueba las consultas contra PostgreSQL. Si se corre solo, falla
 con *"Base de datos inalcanzable"* (`make: *** [test] Error 1`). Los pasos son:
@@ -148,7 +148,7 @@ la app está en uso con datos que se quieran conservar.
 
 # Interfaces dinámicas con HTMX (TP6)
 
-HTMX 1.9.10 se incluye en `views/layout.templ`:
+HTMX 1.9.10 se incluye en `plataforma/vista/layout.templ`:
 
 ```html
 <script src="https://unpkg.com/htmx.org@1.9.10"></script>
@@ -156,15 +156,15 @@ HTMX 1.9.10 se incluye en `views/layout.templ`:
 
 ## Crear una suscripción sin recargar la página
 
-- **Formulario** (`views/suscripcion_form.templ`, componente `SuscripcionForm`,
+- **Formulario** (`features/nuevasuscripcion/vista.templ`, componente `SuscripcionForm`,
   `id="form-suscripcion"`):
   `hx-post="/cuenta/suscripciones"`, `hx-target="#panel-activas"` y
   `hx-swap="outerHTML"`. `method` y `action` siguen como respaldo.
-- **Lista** (`views/cuenta.templ`, componente `PanelActivas`,
+- **Lista** (`plataforma/vista/activas.templ`, componente `PanelActivas`,
   `id="panel-activas"`): las suscripciones activas. Está debajo del formulario
   en *Nueva suscripción* (y también en *Mi cuenta*).
 - **Handler `POST /cuenta/suscripciones`** (`crearSuscripcion` en
-  `handlers/suscripciones.go`): **ya no redirige**. Crea la suscripción, vuelve
+  `features/nuevasuscripcion/handler.go`): **ya no redirige**. Crea la suscripción, vuelve
   a consultar la lista y devuelve solo el fragmento `RespuestaSuscripcionCreada`:
   1. `PanelActivas` actualizado: reemplaza a `#panel-activas` (el `hx-target`).
   2. `SuscripcionFormOOB`: el formulario **vacío** con `hx-swap-oob="true"`.
@@ -193,7 +193,7 @@ HTMX 1.9.10 se incluye en `views/layout.templ`:
   navegador (*"localhost:8080 dice…"*). En su lugar, la pregunta aparece en el
   mismo aviso negro de los mensajes, también con HTMX y sin JavaScript propio:
   - **Botón *Eliminar*** en cada fila de *Mis suscripciones*
-    (`ItemSuscripcion` en `views/suscripcion_list.templ`; cada fila es un
+    (`ItemSuscripcion` en `features/missuscripciones/lista.templ`; cada fila es un
     `<li id="fila-{id}">`): `hx-get="/cuenta/suscripciones/{id}/confirmar-eliminar?mes=AAAA-MM"`,
     `hx-target="#avisos"`, `hx-swap="outerHTML"`.
   - **Handler `GET /cuenta/suscripciones/{id}/confirmar-eliminar`**
@@ -279,28 +279,49 @@ la máquina (fuera de Docker), Prometheus la busca en `host.docker.internal:8080
 
 # Arquitectura
 
+## Vertical Slice Architecture
 
-- **`views/`** — componentes templ (capa de presentación) y funciones de
-  apoyo de las vistas (`vencimientos.go`: meses, calendario, totales).
-- **`handlers/`** — handlers HTTP: leen el formulario, verifican la sesión,
-  llaman a la lógica y renderizan la vista (página completa o, para HTMX, un
-  fragmento) o redirigen. Reemplazan a los
-  handlers JSON del TP4. Como sugiere la clase de lógica del negocio
-  ("estructura limpia": handlers separados por rutas, funciones auxiliares y
-  manejo centralizado de errores), están separados en archivos:
-  - `web.go`: todas las rutas (`Registrar`);
-  - `usuarios.go`: inicio, login, registro, logout y mi cuenta;
-  - `suscripciones.go`: lista del mes, alta (con HTMX), modificar, ver la contraseña y eliminar (DELETE con HTMX);
-  - `comunes.go`: lo que comparten las páginas (sesión, layout, avisos,
-    renderizado y `describirError`, que traduce los errores de la lógica a
-    códigos HTTP);
-  - `formularios.go`: lectura de formularios y parámetros, y filtros por mes y
-    búsqueda;
-  - `sesiones.go`: la cookie de sesión.
-- **`logic/`** — reglas de negocio (validaciones, contraseñas con bcrypt,
-  catálogo precargado, renovación automática, cuentas distintas, solo
-  lectura).
+Siguiendo la clase de diseño (*Arquitectura de Rebanadas Verticales*), el
+código web está organizado **por funcionalidad** y no por capa técnica. Cada
+*slice* en `features/` tiene todo lo que necesita su funcionalidad de punta a
+punta: sus rutas (`Registrar`), su handler y su vista templ con los datos
+(DTOs) que muestra. Para cambiar, por ejemplo, cómo se elimina una suscripción,
+se tocan solo los archivos de `features/missuscripciones/`.
+
+| Slice | Rutas | Qué hace |
+|---|---|---|
+| `features/inicio` | `GET /` | Portada pública |
+| `features/sesion` | `GET/POST /login`, `POST /logout` | Iniciar y cerrar sesión |
+| `features/registro` | `GET/POST /registro` | Crear una cuenta |
+| `features/cuenta` | `GET /cuenta` | Saludo, lo que vence este mes y las suscripciones activas |
+| `features/nuevasuscripcion` | `GET /cuenta/suscripciones/nueva`, `POST /cuenta/suscripciones/nueva/catalogo`, `POST /cuenta/suscripciones` | Formulario, catálogo para elegir el servicio y alta con HTMX |
+| `features/missuscripciones` | `GET /cuenta/suscripciones`, `POST .../{id}/modificar`, `POST .../{id}/password`, `GET .../{id}/confirmar-eliminar`, `DELETE .../{id}` | Lista del mes, buscador, calendario, detalle, modificar, ver la contraseña y eliminar con HTMX |
+
+`main.go` solo llama al `Registrar` de cada slice. Los slices **no se
+importan entre sí**; lo que comparten está aparte, como propone la filmina
+*"Slices: ¿Y el código compartido?"*:
+
+- **`plataforma/`** — el código transversal (lo que la filmina llama
+  `internal/platform`): `App` (los servicios de `logic/` con las consultas de
+  sqlc y las sesiones, `ConSesion` para exigir el login y `Pagina` para los
+  datos del layout), `sesiones.go` (cookie HttpOnly), `http.go` (renderizado,
+  avisos, ayudas de HTMX y `DescribirError`, que traduce los errores de la
+  lógica a códigos HTTP), `formularios.go` (lectura de formularios y filtro
+  por mes) y `metricas.go` (monitoreo con Prometheus).
+- **`plataforma/vista/`** — la interfaz que comparten todas las páginas:
+  `Layout`, la barra con el catálogo de servicios, los avisos, los íconos, el
+  panel de suscripciones activas (lo usan *Mi cuenta* y *Nueva suscripción*) y
+  el formato de montos, fechas y meses.
+- **`logic/`** — las reglas de negocio, que funcionan como el *Shared Kernel*
+  de la filmina: la renovación automática, el solo lectura, las cuentas
+  distintas del mismo servicio y la validación del monto las usan varios
+  slices (crear, modificar, listar) y también `main.go` al iniciar, así que
+  no pertenecen a uno solo.
 - **`db/`** — esquema, queries y código generado por sqlc.
+
+Los tests de cada vista están dentro de su slice (`features/*/vista_test.go`)
+y usan las ayudas de `plataforma/pruebas/`. Las rutas no cambiaron, así que
+las pruebas con Hurl son las mismas.
 
 
 
@@ -340,18 +361,19 @@ El modelo de datos está compuesto por 4 tablas relacionales, definidas en
 .
 ├── main.go                 # Conexión, catálogo, renovación y servidor HTTP
 ├── salud.go                # Health check de la aplicación (/salud/vivo y /salud/lista)
-├── plataforma/metricas.go  # Monitoreo: métricas para Prometheus (GET /metrics) y su middleware
 ├── monitoreo/              # Configuración de Prometheus (prometheus.yml) y reglas de alerta (alertas.yml)
 ├── main_test.go            # Tests de integración de sqlc
-├── handlers/
-│   ├── web.go              # Todas las rutas
-│   ├── usuarios.go         # Inicio, login, registro, logout y mi cuenta
-│   ├── suscripciones.go    # Lista, alta (HTMX), modificar, contraseña y eliminar (DELETE, HTMX)
-│   ├── comunes.go          # Sesión de la página, renderizado, avisos, errores y ayudas de HTMX
-│   ├── formularios.go      # Lectura de formularios y filtros
-│   └── sesiones.go         # Sesiones con cookie HttpOnly
-├── logic/                  # Reglas de negocio sin HTTP: suscripcion.go (incluye cuentas distintas), renovacion.go (renovación y solo lectura), datos_de_prueba.go y sus tests
-├── views/                  # Componentes templ, vencimientos.go y views_test.go
+├── features/               # Vertical slices: cada uno con handler.go (rutas y handlers), vista .templ y tests
+│   ├── inicio/             # Portada
+│   ├── sesion/             # Login y logout
+│   ├── registro/           # Crear cuenta
+│   ├── cuenta/             # Mi cuenta
+│   ├── nuevasuscripcion/   # Formulario, catálogo y alta (HTMX)
+│   └── missuscripciones/   # Lista, calendario, detalle, modificar, contraseña y eliminar (HTMX)
+├── plataforma/             # Código compartido por los slices: App, sesiones, http.go, formularios.go y metricas.go (Prometheus)
+│   ├── vista/              # Layout, barra, avisos, panel de activas y formato (templ)
+│   └── pruebas/            # Ayudas para los tests de las vistas
+├── logic/                  # Reglas de negocio sin HTTP (Shared Kernel): suscripcion.go (incluye cuentas distintas), renovacion.go (renovación y solo lectura), datos_de_prueba.go y sus tests
 ├── static/styles.css       # Estilos (sin JavaScript propio; HTMX se carga desde el CDN)
 ├── db/
 │   ├── schema/schema.sql

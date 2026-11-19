@@ -1,0 +1,47 @@
+package vista
+
+import "strconv"
+
+// IDPanelActivas es el id de la lista de suscripciones activas: el destino
+// (hx-target) del formulario de nueva suscripción
+const IDPanelActivas = "panel-activas"
+
+// PanelActivas lista todas las suscripciones activas; cada una lleva al
+// detalle en el mes en que vence. Es compartido: lo usan los slices "Mi
+// cuenta" y "Nueva suscripción", donde es el destino de HTMX al crear una.
+templ PanelActivas(activas Activas) {
+	<section id={ IDPanelActivas } class="panel activas" aria-labelledby="titulo-activas">
+		<h2 id="titulo-activas">Tus suscripciones activas</h2>
+		if len(activas.Lista) == 0 {
+			<ul class="lista">
+				@VacioLista("No tenés suscripciones activas.")
+			</ul>
+		} else {
+			<p class="total">{ textoCantidad(len(activas.Lista)) }</p>
+			<ul class="lista" id="lista-activas">
+				for _, s := range activas.Lista {
+					<li class="item">
+						@IconoCategoria(s.ServicioCategoria)
+						<span class="item-info">
+							<strong>{ s.ServicioNombre } — { FormatearMonto(s.Monto) }</strong>
+							<span class="item-detalle">
+								Vence el { FormatearFecha(s.FechaVencimiento) }
+								if s.UsuarioCuenta != nil {
+									· { *s.UsuarioCuenta }
+								}
+							</span>
+						</span>
+						<a class="boton boton-chico" href={ templ.URL(UrlSuscripciones(s.FechaVencimiento.Format("2006-01"), "", s.IDSuscripcion, false)) }>Ver</a>
+					</li>
+				}
+			</ul>
+		}
+	</section>
+}
+
+func textoCantidad(cantidad int) string {
+	if cantidad == 1 {
+		return "1 suscripción"
+	}
+	return strconv.Itoa(cantidad) + " suscripciones"
+}

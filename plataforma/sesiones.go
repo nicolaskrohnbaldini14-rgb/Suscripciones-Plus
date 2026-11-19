@@ -1,4 +1,4 @@
-package handlers
+package plataforma
 
 import (
 	"crypto/rand"

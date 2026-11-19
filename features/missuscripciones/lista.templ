@@ -1,0 +1,151 @@
+package missuscripciones
+
+import (
+	"strconv"
+
+	"tp2-krohn-trapani-cicopiedi/plataforma/vista"
+)
+
+// MisSuscripcionesPage muestra las suscripciones que vencen en un mes, con el
+// buscador, los links a otros meses, el calendario y (si se pidió) el detalle
+templ MisSuscripcionesPage(p vista.Pagina, d DatosSuscripciones) {
+	@vista.Layout(p, contenidoMisSuscripciones(d))
+}
+
+templ contenidoMisSuscripciones(d DatosSuscripciones) {
+	<div class="titulo-con-accion">
+		<div>
+			<h1>Mis suscripciones</h1>
+		</div>
+		<a href="/cuenta/suscripciones/nueva" class="boton">Nueva suscripción</a>
+	</div>
+	<div class="vencimientos">
+		<section class="panel">
+			if d.SoloLectura {
+				<p class="aviso-lectura">Estás viendo un mes anterior: estas suscripciones son solo de lectura.</p>
+			}
+			@TotalMes(d, false)
+			if d.HayEnElMes {
+				<form method="get" action="/cuenta/suscripciones" class="buscador-form">
+					<input type="hidden" name="mes" value={ d.Mes }/>
+					// la lupa (dibujada con CSS) es el botón para buscar; también busca con Enter
+					<div class="buscador">
+						<input type="search" name="q" value={ d.Busqueda } placeholder="Servicio, categoría o cuenta…" autocomplete="off" aria-label="Buscar en este mes"/>
+						<button type="submit" class="buscador-lupa" aria-label="Buscar"></button>
+					</div>
+					if d.Busqueda != "" {
+						<a href={ templ.URL(vista.UrlSuscripciones(d.Mes, "", 0, false)) } class="boton-secundario boton-chico">Limpiar</a>
+					}
+				</form>
+			}
+			@ListaSuscripciones(d)
+			<nav class="navegacion-meses" aria-label="Otros meses">
+				<a href={ templ.URL(vista.UrlSuscripciones(d.MesAnterior, "", 0, false)) }>← { d.NombreAnterior }</a>
+				<a id="mes-siguiente" href={ templ.URL(vista.UrlSuscripciones(d.MesSiguiente, "", 0, false)) }>Ver los vencimientos de { d.NombreSiguiente } →</a>
+			</nav>
+		</section>
+		@Calendario(d, false)
+	</div>
+	if d.Detalle != nil {
+		@DetalleSuscripcion(d, *d.Detalle)
+	}
+}
+
+// TotalMes: en un mes anterior es todo lo que venció; en el actual, lo que
+// falta pagar. Tiene id para actualizarlo (oob) después de borrar.
+templ TotalMes(d DatosSuscripciones, oob bool) {
+	<p id="total-mes" class="total" { vista.FueraDeBanda(oob)... }>
+		if d.SoloLectura {
+			Gasto mensual: { d.Total }
+		} else {
+			Gasto mensual (activo): { d.Total }
+		}
+	</p>
+}
+
+// ListaSuscripciones son las suscripciones del mes que coinciden con la búsqueda
+templ ListaSuscripciones(d DatosSuscripciones) {
+	<ul id="lista-suscripciones" class="lista">
+		if !d.HayAlguna {
+			@vista.VacioLista("Todavía no registraste ninguna suscripción.")
+		} else if !d.HayEnElMes {
+			@vista.VacioLista("No tenés suscripciones que venzan en " + d.NombreMes + ".")
+		} else if len(d.Suscripciones) == 0 {
+			@vista.VacioLista("Ninguna suscripción de " + d.NombreMes + " coincide con \"" + d.Busqueda + "\".")
+		} else {
+			for _, s := range d.Suscripciones {
+				@ItemSuscripcion(d, s)
+			}
+		}
+	</ul>
+}
+
+// ItemSuscripcion: logo y datos (link al detalle), el estado y, si es
+// editable, "Modificar" (monto, cuenta y estado) y "Eliminar" (pide
+// confirmación y borra con HTMX), en ese orden
+templ ItemSuscripcion(d DatosSuscripciones, s vista.Fila) {
+	<li id={ IDFila(s.IDSuscripcion) } class={ "item", templ.KV("item-solo-lectura", !d.Editables[s.IDSuscripcion]) }>
+		<a class="item-enlace" href={ templ.URL(vista.UrlSuscripciones(d.Mes, d.Busqueda, s.IDSuscripcion, false)) } aria-label={ "Ver detalles de " + s.ServicioNombre }>
+			@vista.IconoCategoria(s.ServicioCategoria)
+			<span class="item-info">
+				<strong>{ s.ServicioNombre } — { vista.FormatearMonto(s.Monto) }</strong>
+				<span class="item-detalle">Tocá para ver los detalles</span>
+			</span>
+		</a>
+		if d.Editables[s.IDSuscripcion] {
+			<span class="estado-fijo">{ vista.TextoEstado(s.Estado) }</span>
+			<a class="btn-modificar" href={ templ.URL(vista.UrlSuscripciones(d.Mes, d.Busqueda, s.IDSuscripcion, true)) }>Modificar</a>
+			// TP6: antes de borrar se pide confirmación en el aviso negro de la
+			// página (no con la ventana del navegador de hx-confirm): HTMX pide
+			// el aviso al servidor y lo pone en #avisos (ver ConfirmarEliminar)
+			<button
+				type="button"
+				class="btn-eliminar"
+				hx-get={ UrlConfirmarEliminar(d.Mes, d.Busqueda, s.IDSuscripcion, false) }
+				hx-target="#avisos"
+				hx-swap="outerHTML"
+			>Eliminar</button>
+		} else {
+			<span class="estado-fijo">{ vista.TextoEstado(s.Estado) }</span>
+		}
+	</li>
+}
+
+// Calendario del mes con un pin en cada día de vencimiento; el cartel con
+// los servicios aparece al pasar el cursor (CSS)
+templ Calendario(d DatosSuscripciones, oob bool) {
+	<aside id="panel-calendario" class="panel calendario" aria-label="Calendario de vencimientos" { vista.FueraDeBanda(oob)... }>
+		<h2>{ vista.MayusculaInicial(d.NombreMes) }</h2>
+		<div id="calendario" class="calendario-grilla">
+			for _, inicial := range []string{"L", "M", "M", "J", "V", "S", "D"} {
+				<div class="cal-semana">{ inicial }</div>
+			}
+			for _, c := range d.Calendario {
+				if c.Dia == 0 {
+					<div></div>
+				} else if len(c.Vencen) == 0 {
+					<div class={ "cal-dia", templ.KV("cal-hoy", c.Hoy) }><span>{ strconv.Itoa(c.Dia) }</span></div>
+				} else {
+					<div
+						class={ "cal-dia", "cal-con-vencimiento", templ.KV("cal-hoy", c.Hoy), templ.KV("cal-izquierda", c.Columna <= 1), templ.KV("cal-derecha", c.Columna >= 5) }
+						tabindex="0"
+					>
+						<span>{ strconv.Itoa(c.Dia) }</span>
+						<span class="cal-pin" aria-hidden="true"></span>
+						<div class="cal-cartel" role="tooltip">
+							<strong>Vence el { strconv.Itoa(c.Dia) }:</strong>
+							for _, v := range c.Vencen {
+								<span>
+									{ v.ServicioNombre } — { vista.FormatearMonto(v.Monto) }
+									if v.Estado != "Activa" {
+										({ vista.TextoEstado(v.Estado) })
+									}
+								</span>
+							}
+						</div>
+					</div>
+				}
+			}
+		</div>
+	</aside>
+}
