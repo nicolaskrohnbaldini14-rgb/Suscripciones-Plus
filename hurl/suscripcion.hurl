@@ -457,6 +457,15 @@ xpath "count(//a[@class='btn-modificar'])" == 0
 xpath "count(//button[@class='btn-eliminar'])" == 0
 xpath "count(//*[@hx-delete])" == 0
 
+# y tampoco se puede pedir la confirmación para borrarla (403 en el aviso)
+GET {{host}}/cuenta/suscripciones/{{sub_vieja_id}}/confirmar-eliminar?mes=2025-03
+HX-Request: true
+HTTP 200
+[Asserts]
+header "HX-Retarget" == "#avisos"
+xpath "count(//div[contains(@class,'mensaje-confirmar')])" == 0
+xpath "normalize-space(//div[@id='avisos'])" contains "no se pueden modificar"
+
 # el período siguiente (marzo de 2026) mantiene el día y el monto
 GET {{host}}/cuenta/suscripciones?mes=2026-03
 HTTP 200
@@ -506,23 +515,46 @@ xpath "count(//form[contains(@action,'/modificar')])" == 0
 
 
 # ---------- 11. Eliminar una suscripción propia (TP6: con HTMX) ----------
-# en la lista, "Eliminar" es un botón con hx-delete que reemplaza la fila más
-# cercana y pide confirmación antes de borrar
+# en la lista, "Eliminar" pide con HTMX el aviso de confirmación y lo pone en
+# #avisos (no usa la ventana del navegador: no hay hx-confirm)
 GET {{host}}/cuenta/suscripciones?mes=2026-12
 HTTP 200
 [Asserts]
-xpath "string(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]//button[@class='btn-eliminar']/@hx-delete)" == "/cuenta/suscripciones/{{sub_otra_id}}?mes=2026-12"
-xpath "string(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]//button[@class='btn-eliminar']/@hx-target)" == "closest li"
-xpath "string(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]//button[@class='btn-eliminar']/@hx-swap)" == "outerHTML"
-xpath "string(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]//button[@class='btn-eliminar']/@hx-confirm)" contains "¿Seguro que querés eliminar la suscripción a Netflix?"
+xpath "string(//li[@id='fila-{{sub_otra_id}}']//button[@class='btn-eliminar']/@hx-get)" == "/cuenta/suscripciones/{{sub_otra_id}}/confirmar-eliminar?mes=2026-12"
+xpath "string(//li[@id='fila-{{sub_otra_id}}']//button[@class='btn-eliminar']/@hx-target)" == "#avisos"
+xpath "string(//li[@id='fila-{{sub_otra_id}}']//button[@class='btn-eliminar']/@hx-swap)" == "outerHTML"
+xpath "count(//*[@hx-confirm])" == 0
 # orden: estado, Modificar y Eliminar
 xpath "name(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]/*[2])" == "span"
 xpath "string(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]/*[3]/@class)" == "btn-modificar"
 xpath "string(//li[.//a[contains(@href,'ver={{sub_otra_id}}')]]/*[4]/@class)" == "btn-eliminar"
 xpath "normalize-space(//p[@id='total-mes'])" == "Gasto mensual (activo): $ 15.900,00"
 
-# DELETE: 200 sin contenido principal (la fila desaparece); fuera de banda
-# llegan el gasto del mes actualizado, el calendario y el aviso
+# el aviso de confirmación: la pregunta con "Cancelar" y "Sí, eliminar"
+GET {{host}}/cuenta/suscripciones/{{sub_otra_id}}/confirmar-eliminar?mes=2026-12
+HX-Request: true
+HTTP 200
+[Asserts]
+xpath "normalize-space(//div[@id='avisos']/div[contains(@class,'mensaje-confirmar')]/span[@id='confirmar-texto'])" == "¿Seguro que querés eliminar la suscripción a Netflix? No se puede deshacer."
+xpath "string(//div[contains(@class,'mensaje-confirmar')]//button[normalize-space(.)='Sí, eliminar']/@hx-delete)" == "/cuenta/suscripciones/{{sub_otra_id}}?mes=2026-12"
+xpath "string(//div[contains(@class,'mensaje-confirmar')]//button[normalize-space(.)='Sí, eliminar']/@hx-target)" == "#fila-{{sub_otra_id}}"
+xpath "string(//div[contains(@class,'mensaje-confirmar')]//button[normalize-space(.)='Cancelar']/@hx-get)" contains "cancelar=1"
+
+# "Cancelar": el aviso queda vacío y no se borra nada
+GET {{host}}/cuenta/suscripciones/{{sub_otra_id}}/confirmar-eliminar?mes=2026-12&cancelar=1
+HX-Request: true
+HTTP 200
+[Asserts]
+xpath "count(//div[@id='avisos'])" == 1
+xpath "normalize-space(//div[@id='avisos'])" == ""
+
+GET {{host}}/cuenta/suscripciones?mes=2026-12
+HTTP 200
+[Asserts]
+xpath "count(//li[@id='fila-{{sub_otra_id}}'])" == 1
+
+# DELETE ("Sí, eliminar"): 200 sin contenido principal (la fila desaparece);
+# fuera de banda llegan el gasto del mes actualizado, el calendario y el aviso
 DELETE {{host}}/cuenta/suscripciones/{{sub_otra_id}}?mes=2026-12
 HX-Request: true
 HTTP 200

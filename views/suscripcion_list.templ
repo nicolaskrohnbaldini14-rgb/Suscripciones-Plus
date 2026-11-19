@@ -105,7 +105,7 @@ templ RespuestaListaVacia(d DatosSuscripciones, aviso Aviso) {
 // editable, "Modificar" (monto, cuenta y estado) y "Eliminar" (pide
 // confirmación y borra con HTMX), en ese orden
 templ ItemSuscripcion(d DatosSuscripciones, s Fila) {
-	<li class={ "item", templ.KV("item-solo-lectura", !d.Editables[s.IDSuscripcion]) }>
+	<li id={ IDFila(s.IDSuscripcion) } class={ "item", templ.KV("item-solo-lectura", !d.Editables[s.IDSuscripcion]) }>
 		<a class="item-enlace" href={ templ.URL(UrlSuscripciones(d.Mes, d.Busqueda, s.IDSuscripcion, false)) } aria-label={ "Ver detalles de " + s.ServicioNombre }>
 			@IconoCategoria(s.ServicioCategoria)
 			<span class="item-info">
@@ -116,22 +116,58 @@ templ ItemSuscripcion(d DatosSuscripciones, s Fila) {
 		if d.Editables[s.IDSuscripcion] {
 			<span class="estado-fijo">{ textoEstado(s.Estado) }</span>
 			<a class="btn-modificar" href={ templ.URL(UrlSuscripciones(d.Mes, d.Busqueda, s.IDSuscripcion, true)) }>Modificar</a>
-			// TP6: borra sin recargar la página. HTMX pide confirmación
-			// (hx-confirm), envía DELETE /cuenta/suscripciones/{id} y reemplaza
-			// la fila entera (closest li, outerHTML) por la respuesta vacía.
-			// El mes y la búsqueda viajan para recalcular el gasto y el calendario.
+			// TP6: antes de borrar se pide confirmación en el aviso negro de la
+			// página (no con la ventana del navegador de hx-confirm): HTMX pide
+			// el aviso al servidor y lo pone en #avisos (ver ConfirmarEliminar)
 			<button
 				type="button"
 				class="btn-eliminar"
-				hx-delete={ UrlBorrar(d.Mes, d.Busqueda, s.IDSuscripcion) }
-				hx-target="closest li"
+				hx-get={ UrlConfirmarEliminar(d.Mes, d.Busqueda, s.IDSuscripcion, false) }
+				hx-target="#avisos"
 				hx-swap="outerHTML"
-				hx-confirm={ "¿Seguro que querés eliminar la suscripción a " + s.ServicioNombre + "? No se puede deshacer." }
 			>Eliminar</button>
 		} else {
 			<span class="estado-fijo">{ textoEstado(s.Estado) }</span>
 		}
 	</li>
+}
+
+// IDFila es el id de la fila de una suscripción en la lista (lo usa el
+// DELETE para reemplazarla)
+func IDFila(id int32) string {
+	return "fila-" + strconv.Itoa(int(id))
+}
+
+// ConfirmarEliminar (TP6) pide confirmación antes de borrar en el mismo aviso
+// negro de los mensajes (fijo arriba de la pantalla), sin la ventana del
+// navegador. Reemplaza el contenedor #avisos.
+//   - "Sí, eliminar" envía DELETE /cuenta/suscripciones/{id} y reemplaza la
+//     fila (#fila-{id}, outerHTML) por la respuesta vacía; esa respuesta trae
+//     fuera de banda el aviso "Suscripción eliminada", que reemplaza esta
+//     pregunta, y el gasto y el calendario actualizados.
+//   - "Cancelar" le pide al servidor el aviso vacío.
+templ ConfirmarEliminar(mes, busqueda string, s Fila) {
+	<div id="avisos">
+		<div class="mensaje error mensaje-confirmar" role="alertdialog" aria-labelledby="confirmar-texto">
+			<span id="confirmar-texto">¿Seguro que querés eliminar la suscripción a { s.ServicioNombre }? No se puede deshacer.</span>
+			<span class="mensaje-acciones">
+				<button
+					type="button"
+					class="boton-secundario boton-chico"
+					hx-get={ UrlConfirmarEliminar(mes, busqueda, s.IDSuscripcion, true) }
+					hx-target="#avisos"
+					hx-swap="outerHTML"
+				>Cancelar</button>
+				<button
+					type="button"
+					class="btn-confirmar-aviso boton-chico"
+					hx-delete={ UrlBorrar(mes, busqueda, s.IDSuscripcion) }
+					hx-target={ "#" + IDFila(s.IDSuscripcion) }
+					hx-swap="outerHTML"
+				>Sí, eliminar</button>
+			</span>
+		</div>
+	</div>
 }
 
 // Calendario del mes con un pin en cada día de vencimiento; el cartel con

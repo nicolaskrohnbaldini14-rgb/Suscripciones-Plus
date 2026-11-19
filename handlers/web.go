@@ -55,6 +55,7 @@ func (h *Web) Registrar(mux *http.ServeMux) {
 	mux.HandleFunc("POST /cuenta/suscripciones/{id}/modificar", h.conSesion(h.modificar))
 	mux.HandleFunc("POST /cuenta/suscripciones/{id}/password", h.conSesion(h.revelarPassword))
 	// TP6: borrado con HTMX (hx-delete), sin recargar la página
+	mux.HandleFunc("GET /cuenta/suscripciones/{id}/confirmar-eliminar", h.conSesion(h.confirmarEliminar))
 	mux.HandleFunc("DELETE /cuenta/suscripciones/{id}", h.conSesion(h.eliminar))
 
 	// "no-cache": el navegador siempre consulta si hay una versión nueva del CSS

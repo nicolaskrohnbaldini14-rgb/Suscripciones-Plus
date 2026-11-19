@@ -185,6 +185,27 @@ func UrlSuscripciones(mes, busqueda string, ver int32, editar bool) string {
 	return "/cuenta/suscripciones?" + v.Encode()
 }
 
+// UrlConfirmarEliminar es la ruta que devuelve el aviso para confirmar el
+// borrado (hx-get del botón "Eliminar"); con cancelar=true devuelve el aviso
+// vacío (botón "Cancelar"). Lleva el mes y la búsqueda para el DELETE.
+func UrlConfirmarEliminar(mes, busqueda string, id int32, cancelar bool) string {
+	v := url.Values{}
+	if mes != "" {
+		v.Set("mes", mes)
+	}
+	if busqueda != "" {
+		v.Set("q", busqueda)
+	}
+	if cancelar {
+		v.Set("cancelar", "1")
+	}
+	ruta := "/cuenta/suscripciones/" + strconv.Itoa(int(id)) + "/confirmar-eliminar"
+	if len(v) == 0 {
+		return ruta
+	}
+	return ruta + "?" + v.Encode()
+}
+
 // UrlBorrar es la ruta del DELETE de una suscripción (hx-delete). Lleva el
 // mes y la búsqueda de la lista para recalcular el gasto y el calendario.
 func UrlBorrar(mes, busqueda string, id int32) string {

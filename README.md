@@ -19,7 +19,8 @@ desde el CDN en el `<head>` del layout.
 - **Mis suscripciones**: las que vencen en el mes (por defecto el actual), con
   buscador, gasto del mes, calendario con los vencimientos, links al mes
   anterior y al siguiente, y el detalle de cada una. El botón **Eliminar**
-  pide confirmación y quita la fila sin recargar la página (HTMX).
+  pide confirmación en el aviso negro de la página (no con la ventana del
+  navegador) y quita la fila sin recargar la página (HTMX).
 - **Nueva suscripción**: el formulario y, debajo, *Tus suscripciones activas*.
   Al crear una, la lista se actualiza y el formulario se vacía sin recargar
   la página (HTMX).
@@ -187,12 +188,24 @@ HTMX 1.9.10 se incluye en `views/layout.templ`:
 
 - **Consulta sqlc**: `DeleteSubscripcion` en `db/queries/queries.sql`
   (`DELETE FROM suscripcion WHERE id_suscripcion = $1`).
-- **Botón** en cada fila de *Mis suscripciones* (`ItemSuscripcion` en
-  `views/suscripcion_list.templ`):
-  - `hx-delete="/cuenta/suscripciones/{id}?mes=AAAA-MM"`
-  - `hx-target="closest li"` (la lista es un `<ul>`, cada suscripción un `<li>`)
-  - `hx-swap="outerHTML"`
-  - `hx-confirm="¿Seguro que querés eliminar la suscripción a …? No se puede deshacer."`
+- **Confirmación sin la ventana del navegador.** La consigna sugiere
+  `hx-confirm` (opcional), pero ese atributo abre la ventana nativa del
+  navegador (*"localhost:8080 dice…"*). En su lugar, la pregunta aparece en el
+  mismo aviso negro de los mensajes, también con HTMX y sin JavaScript propio:
+  - **Botón *Eliminar*** en cada fila de *Mis suscripciones*
+    (`ItemSuscripcion` en `views/suscripcion_list.templ`; cada fila es un
+    `<li id="fila-{id}">`): `hx-get="/cuenta/suscripciones/{id}/confirmar-eliminar?mes=AAAA-MM"`,
+    `hx-target="#avisos"`, `hx-swap="outerHTML"`.
+  - **Handler `GET /cuenta/suscripciones/{id}/confirmar-eliminar`**
+    (`confirmarEliminar`): verifica que la suscripción sea del usuario y que
+    no sea de solo lectura, y devuelve el aviso *"¿Seguro que querés eliminar
+    la suscripción a …? No se puede deshacer."* (`ConfirmarEliminar`), fijo
+    arriba de la pantalla, con dos botones:
+    - ***Sí, eliminar***: `hx-delete="/cuenta/suscripciones/{id}?mes=AAAA-MM"`,
+      `hx-target="#fila-{id}"` (el `<li>` de esa suscripción) y
+      `hx-swap="outerHTML"`.
+    - ***Cancelar***: pide el mismo handler con `cancelar=1`, que devuelve el
+      aviso vacío.
 - **Handler `DELETE /cuenta/suscripciones/{id}`** (`eliminar`): lee el id de la
   ruta, verifica que la suscripción sea del usuario (si no, 404) y que no sea
   de solo lectura (si no, 403), la borra y responde **200 sin contenido

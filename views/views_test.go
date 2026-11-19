@@ -136,11 +136,12 @@ func TestMisSuscripcionesPage_Editable(t *testing.T) {
 	verificarContiene(t, html,
 		"Gimnasio — $ 32.000,00",
 		`<span class="estado-fijo">Activa</span>`,
-		// TP6: "Eliminar" borra con HTMX: DELETE, la fila más cercana y confirmación
-		`hx-delete="/cuenta/suscripciones/5?mes=2026-10"`,
-		`hx-target="closest li"`,
+		// TP6: "Eliminar" pide con HTMX el aviso de confirmación (no usa la
+		// ventana del navegador) y la fila tiene id para que el DELETE la reemplace
+		`<li id="fila-5"`,
+		`hx-get="/cuenta/suscripciones/5/confirmar-eliminar?mes=2026-10"`,
+		`hx-target="#avisos"`,
 		`hx-swap="outerHTML"`,
-		`hx-confirm="¿Seguro que querés eliminar la suscripción a Gimnasio? No se puede deshacer."`,
 		// el layout carga HTMX
 		`<script src="https://unpkg.com/htmx.org@1.9.10"></script>`,
 		"Modificar",
@@ -351,4 +352,22 @@ func TestGastoPendiente(t *testing.T) {
 	if obtenido := TotalActivo(subs); obtenido != "$ 11.000,00" {
 		t.Errorf("TotalActivo = %s, se esperaba $ 11.000,00", obtenido)
 	}
+}
+
+// TP6: la confirmación del borrado es el aviso negro de la página (#avisos),
+// no la ventana del navegador (hx-confirm)
+func TestConfirmarEliminar(t *testing.T) {
+	html := renderizar(t, ConfirmarEliminar("2026-10", "", filaDePrueba()))
+
+	verificarContiene(t, html,
+		`<div id="avisos">`,
+		`class="mensaje error mensaje-confirmar"`,
+		"¿Seguro que querés eliminar la suscripción a Gimnasio? No se puede deshacer.",
+		// "Sí, eliminar": DELETE que reemplaza la fila
+		`hx-delete="/cuenta/suscripciones/5?mes=2026-10"`,
+		`hx-target="#fila-5"`,
+		// "Cancelar": pide el aviso vacío
+		`hx-get="/cuenta/suscripciones/5/confirmar-eliminar?cancelar=1&amp;mes=2026-10"`,
+	)
+	verificarNoContiene(t, html, "hx-confirm")
 }

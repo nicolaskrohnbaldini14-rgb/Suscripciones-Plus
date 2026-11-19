@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"tp2-krohn-trapani-cicopiedi/db/sqlc"
+	"tp2-krohn-trapani-cicopiedi/logic"
 	"tp2-krohn-trapani-cicopiedi/views"
 )
 
@@ -366,9 +367,42 @@ func (h *Web) revelarPassword(w http.ResponseWriter, r *http.Request, usr sqlc.U
 	h.renderSuscripciones(w, r, usr, http.StatusOK, op)
 }
 
+// confirmarEliminar maneja GET /cuenta/suscripciones/{id}/confirmar-eliminar
+// (TP6): devuelve el aviso que pregunta si se quiere eliminar la suscripción
+// (en lugar de la ventana del navegador), o el aviso vacío si se canceló.
+func (h *Web) confirmarEliminar(w http.ResponseWriter, r *http.Request, usr sqlc.Usuario) {
+	q := r.URL.Query()
+	if q.Get("cancelar") == "1" {
+		render(w, r, http.StatusOK, views.Avisos(views.Aviso{}, false))
+		return
+	}
+
+	id := leerEntero(r.PathValue("id"))
+	todas, err := h.suscripciones.ListarPorUsuario(r.Context(), usr.IDUsuario)
+	if err != nil {
+		errorInterno(w, err)
+		return
+	}
+	for _, s := range todas {
+		if s.IDSuscripcion != id {
+			continue
+		}
+		// las de solo lectura (vencidas o de un mes anterior) no se borran
+		if logic.EsSoloLectura(s.Estado, s.FechaVencimiento) {
+			estado, mensaje := describirError(logic.ErrSoloLectura)
+			errorAlEliminar(w, r, estado, mensaje)
+			return
+		}
+		render(w, r, http.StatusOK, views.ConfirmarEliminar(mesValido(q.Get("mes")), strings.TrimSpace(q.Get("q")), s))
+		return
+	}
+	// no existe o es de otro usuario
+	errorAlEliminar(w, r, http.StatusNotFound, "Suscripción no encontrada.")
+}
+
 // eliminar maneja DELETE /cuenta/suscripciones/{id} (TP6): borra la
 // suscripción y responde 200 con el contenido principal vacío, así HTMX
-// reemplaza la fila (hx-target="closest li") por nada y desaparece de la
+// reemplaza la fila (hx-target="#fila-{id}") por nada y desaparece de la
 // lista. Fuera de banda se actualizan el gasto del mes, el calendario y el
 // aviso. Si la lista del mes queda vacía se reemplaza la lista entera, para
 // mostrar el mensaje de lista vacía.
