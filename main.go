@@ -17,6 +17,7 @@ import (
 	"tp2-krohn-trapani-cicopiedi/db/sqlc"
 	"tp2-krohn-trapani-cicopiedi/handlers"
 	"tp2-krohn-trapani-cicopiedi/logic"
+	"tp2-krohn-trapani-cicopiedi/plataforma"
 )
 
 func main() {
@@ -66,9 +67,12 @@ func main() {
 	// health check de la aplicación: GET /salud/vivo y /salud/lista (salud.go)
 	registrarSalud(mux, dbConn)
 
-	// 5. Servidor HTTP
+	// monitoreo: GET /metrics con las métricas para Prometheus
+	mux.Handle("GET /metrics", plataforma.HandlerMetricas())
+
+	// 5. Servidor HTTP. El middleware de métricas envuelve todas las rutas
 	log.Println("Servidor escuchando en http://localhost:8080")
-	if err := http.ListenAndServe(":8080", mux); err != nil {
+	if err := http.ListenAndServe(":8080", plataforma.Metricas(mux)); err != nil {
 		log.Fatalf("Error al iniciar el servidor HTTP: %v", err)
 	}
 }

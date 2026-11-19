@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
 	"tp2-krohn-trapani-cicopiedi/db/sqlc"
+	"tp2-krohn-trapani-cicopiedi/logic"
+	"tp2-krohn-trapani-cicopiedi/plataforma"
 	"tp2-krohn-trapani-cicopiedi/views"
 )
 
@@ -30,6 +33,9 @@ func (h *Web) login(w http.ResponseWriter, r *http.Request) {
 
 	usr, err := h.usuarios.Autenticar(r.Context(), email, r.FormValue("password"))
 	if err != nil {
+		if errors.Is(err, logic.ErrCredenciales) {
+			plataforma.IniciosDeSesion.WithLabelValues("error").Inc()
+		}
 		estado, mensaje := describirError(err)
 		p := h.pagina(r, "Iniciar sesión", "login", nil)
 		p.Aviso = avisoError(mensaje)
@@ -37,6 +43,7 @@ func (h *Web) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	plataforma.IniciosDeSesion.WithLabelValues("ok").Inc()
 	h.iniciarSesionYRedirigir(w, r, usr, "/cuenta")
 }
 

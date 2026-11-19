@@ -9,6 +9,7 @@ import (
 
 	"tp2-krohn-trapani-cicopiedi/db/sqlc"
 	"tp2-krohn-trapani-cicopiedi/logic"
+	"tp2-krohn-trapani-cicopiedi/plataforma"
 	"tp2-krohn-trapani-cicopiedi/views"
 )
 
@@ -233,6 +234,7 @@ func (h *Web) crearSuscripcion(w http.ResponseWriter, r *http.Request, usr sqlc.
 		h.errorAlCrear(w, r, usr, form, estado, mensaje)
 		return
 	}
+	plataforma.SuscripcionesCreadas.Inc()
 
 	// se vuelve a consultar la lista completa (ya con la nueva suscripción)
 	todas, err := h.suscripciones.ListarPorUsuario(r.Context(), usr.IDUsuario)
@@ -426,6 +428,7 @@ func (h *Web) eliminar(w http.ResponseWriter, r *http.Request, usr sqlc.Usuario)
 		errorAlEliminar(w, r, estado, mensaje)
 		return
 	}
+	plataforma.SuscripcionesEliminadas.Inc()
 
 	todas, err := h.suscripciones.ListarPorUsuario(r.Context(), usr.IDUsuario)
 	if err != nil {

@@ -1,0 +1,19 @@
+# Configuración de Prometheus (servicio "prometheus" del docker-compose).
+# Cada 5 segundos va a buscar las métricas de la app a GET /metrics. La app
+# corre en la máquina (fuera de Docker), por eso se la busca en
+# host.docker.internal (ver extra_hosts en docker-compose.yml).
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+rule_files:
+  - "alertas.yml"
+
+scrape_configs:
+  - job_name: "suscripciones"
+    static_configs:
+      - targets: ["host.docker.internal:8080"]
+
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]

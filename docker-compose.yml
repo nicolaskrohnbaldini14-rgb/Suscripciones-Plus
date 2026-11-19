@@ -19,5 +19,25 @@ services:
       retries: 60
       start_period: 5s
 
+  # monitoreo: Prometheus va a buscar las métricas de la app (GET /metrics)
+  # y permite consultarlas en http://localhost:9090
+  prometheus:
+    image: prom/prometheus:v3.3.0
+    container_name: prometheus-TKC
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoreo/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoreo/alertas.yml:/etc/prometheus/alertas.yml:ro
+    # la app corre en la máquina, fuera de Docker: host.docker.internal
+    # apunta a la máquina también en Linux
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:9090/-/ready"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
 volumes:
   pgdata:

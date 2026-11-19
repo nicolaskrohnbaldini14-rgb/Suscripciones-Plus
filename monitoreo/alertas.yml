@@ -1,0 +1,26 @@
+# Reglas de alerta que evalúa Prometheus (se ven en http://localhost:9090/alerts).
+# No hay Alertmanager configurado, así que no se envían avisos: solo se
+# muestra qué alertas están activas.
+groups:
+  - name: suscripciones
+    rules:
+      # la app no responde a Prometheus (está caída o no se levantó)
+      - alert: AppCaida
+        expr: up{job="suscripciones"} == 0
+        for: 30s
+        labels:
+          severity: critica
+        annotations:
+          summary: "La aplicación no responde en /metrics"
+
+      # más del 5 % de los pedidos de los últimos 5 minutos terminaron en
+      # error del servidor (5xx); "for" evita alertar por un pico aislado
+      - alert: MuchosErroresInternos
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+            / sum(rate(http_requests_total[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: alta
+        annotations:
+          summary: "Más del 5 % de los pedidos terminan en error interno (5xx)"

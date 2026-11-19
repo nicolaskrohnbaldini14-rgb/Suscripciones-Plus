@@ -1,6 +1,6 @@
 APP_NAME := Tp6-Krohn-Trapani-Cicopiedi
 HOST := http://localhost:8080
-HURL_FILES := hurl/publico.hurl hurl/cuentas.hurl hurl/suscripcion.hurl hurl/datos_de_prueba.hurl hurl/salud.hurl
+HURL_FILES := hurl/publico.hurl hurl/cuentas.hurl hurl/suscripcion.hurl hurl/datos_de_prueba.hurl hurl/salud.hurl hurl/metricas.hurl
 # segundos máximos que se espera a que la aplicación esté lista (GET /salud/lista)
 ESPERA_APP := 60
 

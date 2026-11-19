@@ -70,10 +70,10 @@ se pueden eliminar sin recargar la página.
    - Compila el ejecutable en `tmp/`.
    - Si no existe `.env`, lo crea copiando `.env.example` .
    - Borra contenedores y volúmenes previos (`docker compose down -v`).
-   - Levanta PostgreSQL (`docker compose up -d --wait`) y espera a que el
-     healthcheck (`pg_isready`) indique que la base está lista. El esquema se
-     crea al iniciar el contenedor (`db/schema/schema.sql` se monta en
-     `docker-entrypoint-initdb.d`).
+   - Levanta PostgreSQL y Prometheus (`docker compose up -d --wait`) y espera
+     a que sus healthchecks indiquen que están listos (`pg_isready` para la
+     base). El esquema se crea al iniciar el contenedor (`db/schema/schema.sql`
+     se monta en `docker-entrypoint-initdb.d`).
 2. **Ejecución** del servidor en el puerto 8080.
 3. **Tareas posteriores**: al cortar con `Ctrl+C` (o si la app termina) se
    borran los contenedores y volúmenes.
@@ -231,6 +231,52 @@ HTMX 1.9.10 se incluye en `views/layout.templ`:
 | `DELETE /cuenta/suscripciones/{id}` (ok) | 200 · vacío + gasto, calendario y aviso (oob) | igual |
 | `DELETE /cuenta/suscripciones/{id}` (ajena / solo lectura) | 404 / 403 · aviso | 200 · aviso, `HX-Retarget: #avisos` |
 
+# Monitoreo con Prometheus
+
+Siguiendo la clase de monitoreo, la app expone sus métricas y `make run-app`
+levanta también un servidor de **Prometheus** (servicio `prometheus` del
+`docker-compose.yml`) que las va a buscar cada 5 segundos.
+
+- **`GET /metrics`** devuelve las métricas en el formato de texto de
+  Prometheus (cliente oficial `github.com/prometheus/client_golang`). El
+  código está en [`plataforma/metricas.go`](plataforma/metricas.go).
+- Un **middleware** (`plataforma.Metricas`) envuelve todas las rutas y mide
+  cada pedido una sola vez, con el marco **RED**:
+
+  | Métrica | Tipo | Labels | Para qué |
+  |---|---|---|---|
+  | `http_requests_total` | Counter | `method`, `path`, `status` | Cuántos pedidos llegan (*Rate*) y cuántos fallan (*Errors*, por el código) |
+  | `http_request_duration_seconds` | Histogram | `method`, `path` | Cuánto tardan (*Duration*) |
+
+  Como `path` se usa el **patrón de la ruta** (por ejemplo
+  `DELETE /cuenta/suscripciones/{id}`) y no la URL con el id, para no crear
+  una serie por cada URL (baja cardinalidad). Las URLs que no existen quedan
+  como `sin ruta`.
+- **Métricas del negocio**: `suscripciones_creadas_total`,
+  `suscripciones_eliminadas_total` e `inicios_de_sesion_total{resultado="ok|error"}`.
+- El cliente agrega solas las métricas de Go y del proceso (`go_goroutines`,
+  memoria, CPU).
+- **Alertas** ([`monitoreo/alertas.yml`](monitoreo/alertas.yml)): `AppCaida`
+  (la app no responde en `/metrics` durante 30 s) y `MuchosErroresInternos`
+  (más del 5 % de los pedidos de los últimos 5 minutos terminan en 5xx
+  durante 2 minutos). Se ven en <http://localhost:9090/alerts>; no hay
+  Alertmanager, así que no se envían avisos.
+
+Para verlo: `make run-app`, usar la app y abrir <http://localhost:9090>.
+Consultas PromQL de ejemplo (las de la clase):
+
+```
+rate(http_requests_total[5m])
+sum by (path, status) (http_requests_total{job="suscripciones"})
+histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))
+sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))
+suscripciones_creadas_total
+```
+
+La configuración de Prometheus está en
+[`monitoreo/prometheus.yml`](monitoreo/prometheus.yml). Como la app corre en
+la máquina (fuera de Docker), Prometheus la busca en `host.docker.internal:8080`.
+
 # Arquitectura
 
 
@@ -294,6 +340,8 @@ El modelo de datos está compuesto por 4 tablas relacionales, definidas en
 .
 ├── main.go                 # Conexión, catálogo, renovación y servidor HTTP
 ├── salud.go                # Health check de la aplicación (/salud/vivo y /salud/lista)
+├── plataforma/metricas.go  # Monitoreo: métricas para Prometheus (GET /metrics) y su middleware
+├── monitoreo/              # Configuración de Prometheus (prometheus.yml) y reglas de alerta (alertas.yml)
 ├── main_test.go            # Tests de integración de sqlc
 ├── handlers/
 │   ├── web.go              # Todas las rutas
@@ -310,7 +358,7 @@ El modelo de datos está compuesto por 4 tablas relacionales, definidas en
 │   ├── queries/queries.sql
 │   └── sqlc/               # Generado por sqlc (no se versiona)
 ├── hurl/                   # Pruebas de la aplicación
-├── docker-compose.yml      # PostgreSQL con healthcheck (credenciales del .env)
+├── docker-compose.yml      # PostgreSQL con healthcheck (credenciales del .env) y Prometheus
 ├── .env.example            # Variables de entorno de ejemplo (el .env no se versiona)
 ├── .gitignore
 ├── sqlc.yaml
