@@ -18,10 +18,10 @@ fragmentos de HTML que cambian y HTMX los pone en su lugar.
   buscador, gasto del mes, calendario con los vencimientos, links al mes
   anterior y al siguiente, y el detalle de cada una. El botón **Eliminar**
   pide confirmación en el aviso negro de la página (no con la ventana del
-  navegador) y quita la fila sin recargar la página (HTMX).
+  navegador) y quita la fila sin recargar la página.
 - **Nueva suscripción**: el formulario y, debajo, *Tus suscripciones activas*.
   Al crear una, la lista se actualiza y el formulario se vacía sin recargar
-  la página (HTMX).
+  la página.
 
 # Requisitos previos
 
@@ -57,8 +57,7 @@ Al iniciar, la aplicación precarga el catálogo de servicios. Para probarla: re
 lista de abajo se actualiza al instante) y verlas en *Mis suscripciones*, donde
 se pueden eliminar sin recargar la página.
 
-> Se necesita conexión a internet en el navegador para cargar HTMX desde
-> `unpkg.com`.
+
 
 `make run-app` realiza todas las tareas necesarias:
 
@@ -93,8 +92,8 @@ vencimientos en el mes que se está viendo. Entre las de los tres usuarios hay
 suscripciones con y sin cuenta del servicio, dos cuentas distintas de Netflix
 (Martina), una del mes anterior que se renueva sola al iniciar (OSDE de Martina),
 servicios del hogar (Internet, luz) y seguros, algunas pausadas y otras que
-vencen el mes siguiente.
-
+vencen el mes siguiente. --*
+ 
 ## Otros comandos
 
 | Comando | Qué hace |
@@ -144,7 +143,7 @@ make docker-down
 Los tests vacían las tablas al empezar, así que no conviene correrlos mientras
 la app está en uso con datos que se quieran conservar.
 
-# Interfaces dinámicas con HTMX (TP6)
+# Interfaces dinámicas con HTMX 
 
 HTMX 1.9.10 se incluye en `plataforma/vista/layout.templ`:
 
@@ -187,9 +186,9 @@ HTMX 1.9.10 se incluye en `plataforma/vista/layout.templ`:
 - **Consulta sqlc**: `DeleteSubscripcion` en `db/queries/queries.sql`
   (`DELETE FROM suscripcion WHERE id_suscripcion = $1`).
 - **Confirmación sin la ventana del navegador.** La consigna sugiere
-  `hx-confirm` (opcional), pero ese atributo abre la ventana nativa del
+  `hx-confirm`, pero ese atributo abre la ventana nativa del
   navegador (*"localhost:8080 dice…"*). En su lugar, la pregunta aparece en el
-  mismo aviso negro de los mensajes, también con HTMX y sin JavaScript propio:
+  mismo aviso negro de los mensajes, también con HTMX:
   - **Botón *Eliminar*** en cada fila de *Mis suscripciones*
     (`ItemSuscripcion` en `features/missuscripciones/lista.templ`; cada fila es un
     `<li id="fila-{id}">`): `hx-get="/cuenta/suscripciones/{id}/confirmar-eliminar?mes=AAAA-MM"`,
