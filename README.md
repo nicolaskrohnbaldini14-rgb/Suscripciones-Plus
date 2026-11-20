@@ -1,13 +1,11 @@
-# Suscripciones+ · TP6 (entrega final)
+# Suscripciones+ 
 Aplicación web en Go para registrar suscripciones y gastos recurrentes
 (streaming, música, software, deportes, salud, etc.).
 
 Las vistas se generan en el servidor con [templ](https://templ.guide) y, desde
 el TP6, la app usa [HTMX](https://htmx.org) para **crear y eliminar
 suscripciones sin recargar la página**: el servidor devuelve solo los
-fragmentos de HTML que cambian y HTMX los pone en su lugar. No escribimos
-JavaScript propio y el repositorio no tiene archivos `.js`: HTMX se carga
-desde el CDN en el `<head>` del layout.
+fragmentos de HTML que cambian y HTMX los pone en su lugar. 
 
 
 - **Inicio (`/`)**: portada centrada con los botones **Iniciar sesión** y
