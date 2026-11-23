@@ -272,7 +272,7 @@ la máquina (fuera de Docker), Prometheus la busca en `host.docker.internal:8080
 
 ## Vertical Slice Architecture
 
-Siguiendo la clase de diseño (*Arquitectura de Rebanadas Verticales*), el
+Siguiendo la clase de diseño, el
 código web está organizado **por funcionalidad** y no por capa técnica. Cada
 *slice* en `features/` tiene todo lo que necesita su funcionalidad de punta a
 punta: sus rutas (`Registrar`), su handler y su vista templ con los datos
