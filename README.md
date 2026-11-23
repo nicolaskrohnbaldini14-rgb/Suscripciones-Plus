@@ -16,9 +16,7 @@ fragmentos de HTML que cambian y HTMX los pone en su lugar.
   opciones: **ver las suscripciones** o **crear una nueva**.
 - **Mis suscripciones**: las que vencen en el mes (por defecto el actual), con
   buscador, gasto del mes, calendario con los vencimientos, links al mes
-  anterior y al siguiente, y el detalle de cada una. El botón **Eliminar**
-  pide confirmación en el aviso negro de la página (no con la ventana del
-  navegador) y quita la fila sin recargar la página.
+  anterior y al siguiente, y el detalle de cada una. 
 - **Nueva suscripción**: el formulario y, debajo, *Tus suscripciones activas*.
   Al crear una, la lista se actualiza y el formulario se vacía sin recargar
   la página.
