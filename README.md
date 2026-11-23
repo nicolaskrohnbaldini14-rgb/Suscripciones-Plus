@@ -86,11 +86,7 @@ ejemplo:
 | Nicolás | `nicolas@ejemplo.com` | `nicolas123` |
 
 Las suscripciones se arman a partir del mes actual, así que siempre hay
-vencimientos en el mes que se está viendo. Entre las de los tres usuarios hay
-suscripciones con y sin cuenta del servicio, dos cuentas distintas de Netflix
-(Martina), una del mes anterior que se renueva sola al iniciar (OSDE de Martina),
-servicios del hogar (Internet, luz) y seguros, algunas pausadas y otras que
-vencen el mes siguiente. 
+vencimientos en el mes que se está viendo.
  
 ## Otros comandos
 
