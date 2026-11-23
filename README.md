@@ -310,8 +310,7 @@ importan entre sí**; lo que comparten está aparte:
 - **`db/`** — esquema, queries y código generado por sqlc.
 
 Los tests de cada vista están dentro de su slice (`features/*/vista_test.go`)
-y usan las ayudas de `plataforma/pruebas/`. Las rutas no cambiaron, así que
-las pruebas con Hurl son las mismas.
+y usan las ayudas de `plataforma/pruebas/`. 
 
 
 
