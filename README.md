@@ -289,8 +289,7 @@ se tocan solo los archivos de `features/missuscripciones/`.
 | `features/missuscripciones` | `GET /cuenta/suscripciones`, `POST .../{id}/modificar`, `POST .../{id}/password`, `GET .../{id}/confirmar-eliminar`, `DELETE .../{id}` | Lista del mes, buscador, calendario, detalle, modificar, ver la contraseña y eliminar con HTMX |
 
 `main.go` solo llama al `Registrar` de cada slice. Los slices **no se
-importan entre sí**; lo que comparten está aparte, como propone la filmina
-*"Slices: ¿Y el código compartido?"*:
+importan entre sí**; lo que comparten está aparte:
 
 - **`plataforma/`** — el código transversal (lo que la filmina llama
   `internal/platform`): `App` (los servicios de `logic/` con las consultas de
